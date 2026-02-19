@@ -1,5 +1,5 @@
-mode: implement
-current_task: insights-get
+mode: plan
+current_task: analytics-services
 blocked: false
 retry_count: 0
-iteration: 2
+iteration: 1
