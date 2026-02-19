@@ -495,3 +495,4 @@ ollygarden services grouped --sort name-asc --json | jq '.data[].name'
 - **Rate limit**: 60 req/min per key
 - **Response envelope**: `{data, meta{timestamp, total, has_more, trace_id}, links}`
 - **Error envelope**: `{error{code, message, details}, meta{timestamp, trace_id}}`
+- **Generated types**: API response/request types generated from `olive/docs/openapi.json` via `oapi-codegen` into `internal/api/types.gen.go`. Run `go generate ./internal/api/...` to regenerate.
