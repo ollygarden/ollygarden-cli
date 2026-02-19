@@ -1,5 +1,4 @@
-mode: implement
-current_task: scaffold
-iteration: 0
+mode: plan
+current_task: organization
 blocked: false
 retry_count: 0
