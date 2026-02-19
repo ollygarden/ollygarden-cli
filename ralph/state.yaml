@@ -1,5 +1,4 @@
-mode: implement
-current_task: organization
+mode: prioritize
+current_task: null
 blocked: false
 retry_count: 0
-iteration: 1

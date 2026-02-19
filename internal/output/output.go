@@ -22,13 +22,19 @@ type Formatter struct {
 	errWriter io.Writer // stderr
 }
 
-// New creates a Formatter. Writes data to stdout, errors to stderr.
-func New(jsonMode, quiet bool) *Formatter {
+// New creates a Formatter using the given writers for data and errors.
+func New(out, errOut io.Writer, jsonMode, quiet bool) *Formatter {
+	if out == nil {
+		out = os.Stdout
+	}
+	if errOut == nil {
+		errOut = os.Stderr
+	}
 	return &Formatter{
 		json:      jsonMode,
 		quiet:     quiet,
-		writer:    os.Stdout,
-		errWriter: os.Stderr,
+		writer:    out,
+		errWriter: errOut,
 	}
 }
 

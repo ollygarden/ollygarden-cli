@@ -1,12 +1,12 @@
 # Tasks
 
 ## Phase 1 — Scaffolding
-- [ ] **scaffold**: Go module, main.go, root command, HTTP client, auth (OLLYGARDEN_API_KEY), output formatter, --json/--quiet/--version
+- [x] **scaffold**: Go module, main.go, root command, HTTP client, auth (OLLYGARDEN_API_KEY), output formatter, --json/--quiet/--version
   - Scope: go.mod, main.go, cmd/, internal/
   - Accept: `go build ./...` passes, `ollygarden --help` shows command groups
 
 ## Phase 2 — Read Commands
-- [ ] **organization**: `ollygarden organization`
+- [x] **organization**: `ollygarden organization`
   - Spec: specs/CLI.md §3.1
   - Endpoint: GET /api/v1/organization
   - Scope: cmd/organization.go

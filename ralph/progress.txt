@@ -1,0 +1,11 @@
+## 2026-02-19 — scaffold
+- Implemented: Go module, root command with global flags, HTTP client with auth/error handling, output formatter, exit codes
+- Files: go.mod, go.sum, main.go, cmd/root.go, cmd/groups.go, cmd/root_test.go, internal/exitcode/exitcode.go, internal/client/client.go, internal/client/errors.go, internal/client/client_test.go, internal/output/output.go, internal/output/output_test.go
+- Learnings: Cobra's --version flag has test isolation issues when reusing rootCmd across tests (flag state persists). Set Version at declaration time, not lazily. Group commands (no RunE) appear as "Additional help topics" until they have leaf subcommands.
+---
+
+## 2026-02-19 — organization
+- Implemented: `ollygarden organization` command — displays org tier, features, insight types, and instrumentation score
+- Files: cmd/organization.go, cmd/organization_test.go, internal/output/output.go (signature change: New now accepts io.Writer args), internal/output/output_test.go
+- Learnings: output.New must accept io.Writer params so commands can use cmd.OutOrStdout()/ErrOrStderr() for testability. Cobra persistent flag vars (jsonMode, quiet) leak between tests — must reset in cleanup.
+---

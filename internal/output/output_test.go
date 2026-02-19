@@ -11,12 +11,7 @@ import (
 func newTestFormatter(jsonMode, quiet bool) (*Formatter, *bytes.Buffer, *bytes.Buffer) {
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
-	f := &Formatter{
-		json:      jsonMode,
-		quiet:     quiet,
-		writer:    stdout,
-		errWriter: stderr,
-	}
+	f := New(stdout, stderr, jsonMode, quiet)
 	return f, stdout, stderr
 }
 
