@@ -1,4 +1,5 @@
-mode: prioritize
-current_task: null
+mode: plan
+current_task: webhooks-test
 blocked: false
 retry_count: 0
+iteration: 1
