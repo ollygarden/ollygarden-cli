@@ -1,5 +1,5 @@
-mode: implement
-current_task: analytics-services
+mode: plan
+current_task: webhooks-list
 blocked: false
 retry_count: 0
-iteration: 2
+iteration: 1
