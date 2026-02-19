@@ -1,0 +1,5 @@
+mode: prioritize
+current_task: null
+iteration: 0
+blocked: false
+retry_count: 0
