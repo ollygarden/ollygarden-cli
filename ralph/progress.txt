@@ -9,3 +9,99 @@
 - Files: cmd/organization.go, cmd/organization_test.go, internal/output/output.go (signature change: New now accepts io.Writer args), internal/output/output_test.go
 - Learnings: output.New must accept io.Writer params so commands can use cmd.OutOrStdout()/ErrOrStderr() for testability. Cobra persistent flag vars (jsonMode, quiet) leak between tests — must reset in cleanup.
 ---
+
+## 2026-02-19 — services-list
+- Implemented: `ollygarden services list` — paginated service listing with --limit/--offset, table output with ID/NAME/ENVIRONMENT/LAST SEEN/SCORE columns
+- Files: cmd/services_list.go, cmd/services_list_test.go
+- Learnings: Prefix command-specific flag vars (servicesListLimit) to avoid collision in shared cmd package. List commands need flag validation before network I/O. Test helpers for JSON construction keep test code readable.
+---
+
+## 2026-02-19 — services-grouped
+- Implemented: `ollygarden services grouped` — grouped service listing with --limit/--offset/--sort, table output with NAME/ENVIRONMENT/VERSIONS/INSIGHTS/SCORE columns
+- Files: cmd/services_grouped.go, cmd/services_grouped_test.go
+- Learnings: Reuse shared types (serviceScoreCompact) across commands in same package. Sort enum validation with a map keeps code clean and extensible.
+---
+
+## 2026-02-19 — services-search
+- Implemented: `ollygarden services search [query]` — search services by name with --query/--environment/--namespace filters, reuses serviceItem type
+- Files: cmd/services_search.go, cmd/services_search_test.go
+- Learnings: Positional arg + flag alternative pattern: resolve in RunE with positional taking precedence, validate at least one provided. No -q shorthand for --query since it conflicts with global --quiet.
+---
+
+## 2026-02-19 — services-get
+- Implemented: `ollygarden services get <service-id>` — key-value detail view with em dash for empty/nil optional fields
+- Files: cmd/services_get.go, cmd/services_get_test.go
+- Learnings: Reuse shared test helpers (itoa, intPtr) from other test files in same package — don't redeclare. serviceDetail struct includes full API fields but human output omits internal ones (org_id, created_at, updated_at).
+---
+
+## 2026-02-19 — services-versions
+- Implemented: `ollygarden services versions <service-id>` — list related versions with --limit (1-50), table with ID/VERSION/ENVIRONMENT/LAST SEEN/SCORE columns, no pagination hint (no --offset)
+- Files: cmd/services_versions.go, cmd/services_versions_test.go, cmd/services_list.go (added Version field to serviceItem)
+- Learnings: Added Version to serviceItem since versions endpoint returns same schema. No --offset for this endpoint per API design — simpler validation.
+---
+
+## 2026-02-19 — services-insights
+- Implemented: `ollygarden services insights <service-id>` — list insights with --status/--limit/--offset, table with ID/TYPE/IMPACT/SIGNAL/DETECTED columns, pagination hint
+- Files: cmd/services_insights.go, cmd/services_insights_test.go
+- Learnings: Nested JSON structs (insightType) need nil-guard with em dash fallbacks for each field. Status filter passed as comma-separated string directly to API.
+---
+
+## 2026-02-19 — insights-list
+- Implemented: `ollygarden insights list` — org-wide insights with 8 filter flags (service-id, status, signal-type, impact, date-from, date-to, sort) + pagination, table adds SERVICE column vs services-insights
+- Files: cmd/insights_list.go, cmd/insights_list_test.go
+- Learnings: Cobra --help flag persists between test executions — always put help tests last to avoid poisoning subsequent tests. Test helper function names must be unique across all _test.go files in the same package.
+---
+
+## 2026-02-19 — insights-get
+- Implemented: `ollygarden insights get <insight-id>` — key-value detail view with Type/Impact/Signal from nested insightType, em dash for nil/empty fields
+- Files: cmd/insights_get.go, cmd/insights_get_test.go
+- Learnings: Reuse insightTypeCompact from services_insights.go — no need to redeclare. Pattern mirrors services_get exactly: struct → unmarshal → KVPair slice → PrintKeyValue.
+---
+
+## 2026-02-19 — analytics-services
+- Implemented: `ollygarden analytics services` — service usage analytics with --limit, period header on stderr, table with NAME/ENVIRONMENT/TOTAL/TOTAL %/VERSION columns, formatBytes helper
+- Files: cmd/analytics_services.go, cmd/analytics_services_test.go
+- Learnings: Data is an object (not array) containing period + services array — need intermediate struct. formatBytes uses SI units (1000-based) for byte display. Period header goes to stderr to keep stdout data-only.
+---
+
+## 2026-02-19 — webhooks-list
+- Implemented: `ollygarden webhooks list` — paginated webhook listing with --limit/--offset, table with ID/NAME/URL/ENABLED/SEVERITY columns
+- Files: cmd/webhooks_list.go, cmd/webhooks_list_test.go
+- Learnings: Straightforward list command — mirrors services_list exactly. Reused itoa/btoa test helpers from services_list_test.go (same package).
+---
+
+## 2026-02-19 — webhooks-get
+- Implemented: `ollygarden webhooks get <webhook-id>` — key-value detail view with event_types/environments arrays displayed as comma-joined or "all" when empty
+- Files: cmd/webhooks_get.go, cmd/webhooks_get_test.go
+- Learnings: Pattern mirrors insights_get exactly. Empty arrays → "all" display is a simple joinOrAll helper.
+---
+
+## 2026-02-19 — webhooks-deliveries-list
+- Implemented: `ollygarden webhooks deliveries list <webhook-id>` — paginated delivery listing with --limit/--offset, table with ID/STATUS/HTTP/ATTEMPTS/CREATED columns, em dash for zero HTTP status
+- Files: cmd/webhooks_deliveries_list.go, cmd/webhooks_deliveries_list_test.go
+- Learnings: Nested subcommand (webhooks > deliveries > list) — command registers to webhooksDeliveriesCmd from groups.go. HTTP status code 0 means pending/no response yet — display as em dash.
+---
+
+## 2026-02-19 — webhooks-deliveries-get
+- Implemented: `ollygarden webhooks deliveries get <webhook-id> <delivery-id>` — key-value detail view with nullable fields (error_message, completed_at) using *string + em dash fallback
+- Files: cmd/webhooks_deliveries_get.go, cmd/webhooks_deliveries_get_test.go
+- Learnings: Uses *string for nullable JSON fields to distinguish null from empty string. Two positional args with cobra.ExactArgs(2). Tests cover both WEBHOOK_NOT_FOUND and DELIVERY_NOT_FOUND error codes.
+---
+
+## 2026-02-19 — webhooks-create
+- Implemented: `ollygarden webhooks create` — POST webhook with --name/--url (required), --event-type/--environment (repeatable), --min-severity, --enabled flags. Reuses webhookDetail type from webhooks_get.go.
+- Files: cmd/webhooks_create.go, cmd/webhooks_create_test.go
+- Learnings: First write command. StringArrayVar for repeatable flags. MarkFlagRequired for cobra-enforced required flags. Must reset flag vars in test cleanup since they're package-level. nil → empty slice for JSON serialization consistency.
+---
+
+## 2026-02-19 — webhooks-update
+- Implemented: `ollygarden webhooks update <webhook-id>` — PUT partial update with --name/--url/--event-type/--environment/--min-severity/--enabled. Uses map[string]any body with cmd.Flags().Changed() for partial updates.
+- Files: cmd/webhooks_update.go, cmd/webhooks_update_test.go
+- Learnings: Cobra flag Changed state persists across tests on package-level command singletons. Must reset with Flags().VisitAll(func(f *pflag.Flag) { f.Changed = false }) in test cleanup. Partial update pattern: map[string]any body + Changed() checks instead of struct.
+---
+
+## 2026-02-19 — webhooks-delete
+- Implemented: `ollygarden webhooks delete <webhook-id>` — destructive delete with interactive TTY confirmation, --confirm flag for non-interactive use. GETs webhook first for name in prompt/success message. Handles 204 No Content without ParseResponse.
+- Files: cmd/webhooks_delete.go, cmd/webhooks_delete_test.go, go.mod, go.sum (added golang.org/x/term)
+- Learnings: Cobra's --help flag persists across Execute() calls — must reset with `cmd.Flags().Set("help", "false")` in test setup AND keep help tests last. For 204 responses, check StatusCode before ParseResponse (no body to parse). TTY detection testable via package-level var overrides (stdinIsTerminal, stdinReader).
+---
