@@ -73,7 +73,7 @@ func TestAPIKeySetNoError(t *testing.T) {
 }
 
 func TestAPIURLDefault(t *testing.T) {
-	assert.Equal(t, "https://api.olly.garden", rootCmd.PersistentFlags().Lookup("api-url").DefValue)
+	assert.Equal(t, "https://api.ollygarden.cloud", rootCmd.PersistentFlags().Lookup("api-url").DefValue)
 }
 
 func TestAPIURLEnvOverride(t *testing.T) {
@@ -113,6 +113,21 @@ func TestQuietShortFlag(t *testing.T) {
 	flag := rootCmd.PersistentFlags().ShorthandLookup("q")
 	require.NotNil(t, flag)
 	assert.Equal(t, "quiet", flag.Name)
+}
+
+func TestAPIURLMissingSchemeReturnsError(t *testing.T) {
+	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_1234567890abcdef1234567890abcdef")
+
+	testCmd := &cobra.Command{
+		Use:  "scheme-test-cmd",
+		RunE: func(cmd *cobra.Command, args []string) error { return nil },
+	}
+	rootCmd.AddCommand(testCmd)
+	defer rootCmd.RemoveCommand(testCmd)
+
+	_, _, err := executeCommand("scheme-test-cmd", "--api-url", "api.ollygarden.cloud")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--api-url must include scheme")
 }
 
 func TestNewClientUsesFlags(t *testing.T) {

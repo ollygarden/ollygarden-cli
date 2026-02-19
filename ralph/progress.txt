@@ -105,3 +105,9 @@
 - Files: cmd/webhooks_delete.go, cmd/webhooks_delete_test.go, go.mod, go.sum (added golang.org/x/term)
 - Learnings: Cobra's --help flag persists across Execute() calls — must reset with `cmd.Flags().Set("help", "false")` in test setup AND keep help tests last. For 204 responses, check StatusCode before ParseResponse (no body to parse). TTY detection testable via package-level var overrides (stdinIsTerminal, stdinReader).
 ---
+
+## 2026-02-19 — webhooks-test
+- Implemented: `ollygarden webhooks test <webhook-id>` — POST test event, KV output with Success/Status Code/Response Body, "(empty)" fallback for blank response body
+- Files: cmd/webhooks_test_cmd.go, cmd/webhooks_test_cmd_test.go
+- Learnings: File named `_cmd.go` suffix to avoid Go's `_test.go` convention collision. Simplest command — no flags, no destructive confirmation, just POST + display response.
+---

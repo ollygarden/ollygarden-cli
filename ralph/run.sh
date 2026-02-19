@@ -57,8 +57,8 @@ while true; do
       exit 1
     fi
     echo "[ralph] retry $((retries+1))/$MAX_RETRIES on task=$task"
-    yq --in-place ".retry_count = $((retries+1))" ralph/state.yaml
-    yq --in-place '.blocked = false' ralph/state.yaml
+    yq -i ".retry_count = $((retries+1))" ralph/state.yaml
+    yq -i '.blocked = false' ralph/state.yaml
   fi
 
   echo "[ralph] === iteration=$iteration mode=$mode task=$task ==="
@@ -84,10 +84,10 @@ while true; do
     exit_code=$?
     duration=$(format_duration $(($(date +%s) - start_time)))
     echo "[ralph] ERROR mode=$mode exit=$exit_code duration=$duration"
-    yq --in-place '.blocked = true' ralph/state.yaml
+    yq -i '.blocked = true' ralph/state.yaml
   fi
 
-  yq --in-place '.iteration = (.iteration // 0) + 1' ralph/state.yaml
+  yq -i '.iteration = (.iteration // 0) + 1' ralph/state.yaml
   check_control
   sleep 2
 done

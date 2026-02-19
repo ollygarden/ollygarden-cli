@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/ollygarden/ollygarden-cli/internal/client"
 	"github.com/ollygarden/ollygarden-cli/internal/exitcode"
@@ -27,6 +28,12 @@ var rootCmd = &cobra.Command{
 		if cmd.Name() == "help" || cmd.Name() == "ollygarden" {
 			return nil
 		}
+
+		// Validate URL scheme before any network I/O
+		if !strings.HasPrefix(apiURL, "http://") && !strings.HasPrefix(apiURL, "https://") {
+			return fmt.Errorf("Error: --api-url must include scheme (e.g., https://api.ollygarden.cloud)")
+		}
+
 		apiKey := os.Getenv("OLLYGARDEN_API_KEY")
 		if apiKey == "" {
 			return &AuthError{}
@@ -43,7 +50,7 @@ func (e *AuthError) Error() string {
 }
 
 func init() {
-	defaultURL := "https://api.olly.garden"
+	defaultURL := "https://api.ollygarden.cloud"
 	if envURL := os.Getenv("OLLYGARDEN_API_URL"); envURL != "" {
 		defaultURL = envURL
 	}
@@ -74,6 +81,8 @@ func Execute() {
 			code = exitcode.Auth
 		} else if apiErr, ok := err.(*client.APIError); ok {
 			code = apiErr.ExitCode()
+		} else {
+			fmt.Fprintln(os.Stderr, err)
 		}
 		os.Exit(code)
 	}

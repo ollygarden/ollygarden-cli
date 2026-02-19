@@ -109,7 +109,7 @@
   - Scope: cmd/webhooks_delete.go
   - Accept: `ollygarden webhooks delete --help` shows flags, destructive confirmation works, `go test ./...` passes
 
-- [ ] **webhooks-test**: `ollygarden webhooks test <id>`
+- [x] **webhooks-test**: `ollygarden webhooks test <id>`
   - Spec: specs/CLI.md §3.16
   - Endpoint: POST /api/v1/webhooks/{id}/test
   - Scope: cmd/webhooks_test.go
