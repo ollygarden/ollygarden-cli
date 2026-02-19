@@ -1,5 +1,5 @@
-mode: implement
-current_task: webhooks-get
+mode: plan
+current_task: webhooks-deliveries-list
 blocked: false
 retry_count: 0
-iteration: 2
+iteration: 1
