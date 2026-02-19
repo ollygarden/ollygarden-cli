@@ -1,5 +1,5 @@
-mode: implement
-current_task: services-versions
+mode: plan
+current_task: services-insights
 blocked: false
 retry_count: 0
-iteration: 2
+iteration: 1
