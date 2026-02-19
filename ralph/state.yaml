@@ -1,5 +1,5 @@
-mode: prioritize
-current_task: null
+mode: implement
+current_task: scaffold
 iteration: 0
 blocked: false
 retry_count: 0

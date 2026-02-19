@@ -57,8 +57,8 @@ while true; do
       exit 1
     fi
     echo "[ralph] retry $((retries+1))/$MAX_RETRIES on task=$task"
-    yq -y --in-place ".retry_count = $((retries+1))" ralph/state.yaml
-    yq -y --in-place '.blocked = false' ralph/state.yaml
+    yq --in-place ".retry_count = $((retries+1))" ralph/state.yaml
+    yq --in-place '.blocked = false' ralph/state.yaml
   fi
 
   echo "[ralph] === iteration=$iteration mode=$mode task=$task ==="
@@ -66,11 +66,9 @@ while true; do
   start_time=$(date +%s)
   git_before=$(git rev-parse HEAD 2>/dev/null || echo "none")
 
-  if claude \
+  if cat "ralph/prompts/${mode}.md" | claude \
     --permission-mode acceptEdits \
-    --model opus \
-    --print \
-    "$(cat "ralph/prompts/${mode}.md")"; then
+    --model opus; then
 
     duration=$(format_duration $(($(date +%s) - start_time)))
     git_after=$(git rev-parse HEAD 2>/dev/null || echo "none")
@@ -86,10 +84,10 @@ while true; do
     exit_code=$?
     duration=$(format_duration $(($(date +%s) - start_time)))
     echo "[ralph] ERROR mode=$mode exit=$exit_code duration=$duration"
-    yq -y --in-place '.blocked = true' ralph/state.yaml
+    yq --in-place '.blocked = true' ralph/state.yaml
   fi
 
-  yq -y --in-place '.iteration = (.iteration // 0) + 1' ralph/state.yaml
+  yq --in-place '.iteration = (.iteration // 0) + 1' ralph/state.yaml
   check_control
   sleep 2
 done
