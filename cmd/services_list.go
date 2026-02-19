@@ -19,6 +19,7 @@ var (
 type serviceItem struct {
 	ID                   string               `json:"id"`
 	Name                 string               `json:"name"`
+	Version              string               `json:"version"`
 	Environment          string               `json:"environment"`
 	LastSeenAt           string               `json:"last_seen_at"`
 	InstrumentationScore *serviceScoreCompact `json:"instrumentation_score"`
