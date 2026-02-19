@@ -1,5 +1,5 @@
-mode: implement
-current_task: services-grouped
+mode: plan
+current_task: services-search
 blocked: false
 retry_count: 0
-iteration: 2
+iteration: 1
