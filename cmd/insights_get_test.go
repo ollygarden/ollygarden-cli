@@ -51,10 +51,17 @@ func TestInsightsGetHuman(t *testing.T) {
 	assert.Contains(t, out, "Critical")
 	assert.Contains(t, out, "trace")
 	assert.Contains(t, out, "payment-service (svc-1)")
+	assert.Contains(t, out, "v1.0.0")
 	assert.Contains(t, out, "production")
+	assert.Contains(t, out, "backend")
+	assert.Contains(t, out, "otel-trace-1")
+	assert.Contains(t, out, "2026-02-19T09:55:00Z")
 	assert.Contains(t, out, "2026-02-19T10:00:00Z")
 	assert.Contains(t, out, "2026-02-19T09:00:00Z")
 	assert.Contains(t, out, "2026-02-19T12:00:00Z")
+	assert.Contains(t, out, "Error rate exceeds threshold")
+	assert.Contains(t, out, "Check error logs")
+	assert.Contains(t, out, "error_rate")
 }
 
 func TestInsightsGetJSON(t *testing.T) {

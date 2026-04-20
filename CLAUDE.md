@@ -12,13 +12,12 @@
 - Shared logic lives in `internal/`: HTTP client (`internal/client/`), output formatter (`internal/output/`), auth (`internal/auth/`).
 - Use `spf13/cobra` for command registration. Every command must set `Use`, `Short`, `Args`, and `RunE`.
 - Keep command files thin: parse flags → call client → format output → handle errors. No business logic in `cmd/`.
-- `internal/api/types.gen.go` — generated types from OpenAPI spec. Never edit directly.
-- Run `go generate ./internal/api/...` after spec changes.
+- API response types are currently hand-defined inline in each command file (e.g., `insightDetail`, `insightSummaryDetail`). A future improvement is to generate them from `olive/docs/openapi.json` via `oapi-codegen`.
 
 # HTTP Client
 - Single shared client in `internal/client/` — all commands reuse it.
 - Auth: `Authorization: Bearer <key>` header. Key from `OLLYGARDEN_API_KEY` env var only. Never accept secrets as flags.
-- Base URL: `--api-url` flag > `OLLYGARDEN_API_URL` env > `https://api.olly.garden`.
+- Base URL: `--api-url` flag > `OLLYGARDEN_API_URL` env > `https://api.ollygarden.cloud`.
 - API base path: `/api/v1`. All endpoints are prefixed with this.
 - Response envelope: `{data, meta, links}`. Error envelope: `{error{code, message, details}, meta}`.
 - Parse API error codes and map to exit codes per `specs/CLI.md` §5.
@@ -59,6 +58,28 @@
 - `--quiet` never suppresses confirmation prompts.
 - Prompt format: `Delete webhook "<name>" (id: <id>)? [y/N]:` — default No.
 - If a new DELETE endpoint is added, apply the same confirmation pattern.
+
+# Before Adding a New Command
+Before implementing a new CLI command, ensure the olive submodule is up to date so you're working against the latest API spec:
+
+```bash
+# 1. Update the olive submodule to latest main
+cd olive && git pull origin main && cd ..
+
+# 2. Check which API endpoints exist vs CLI commands
+# Compare olive/docs/openapi.json paths against specs/CLI.md command tree
+
+# 3. Verify the endpoint you need exists in olive/docs/openapi.json
+# If it doesn't, the endpoint must be added to olive first — the CLI cannot call endpoints that don't exist
+
+# 4. After confirming the endpoint exists, follow the 8-point checklist in specs/CLI_GUIDELINES.md §6
+```
+
+If the olive submodule was updated, commit the pointer change before starting implementation:
+```bash
+git add olive
+git commit -m "chore: update olive submodule to latest"
+```
 
 # Specs (read before any CLI work)
 - `specs/CLI.md` — command tree, flags, output format, exit codes, examples
