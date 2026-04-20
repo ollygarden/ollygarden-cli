@@ -214,7 +214,7 @@ ollygarden insights get <insight-id>
 
 ### 3.10 `ollygarden insights summary`
 
-```
+```bash
 ollygarden insights summary <insight-id>
 ```
 

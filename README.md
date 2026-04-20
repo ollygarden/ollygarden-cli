@@ -17,7 +17,7 @@ go install ./cmd/ollygarden
 
 ## Configuration
 
-2 important environment variables should be set depending on the enviroment that you are working in. The URL and API key are different for each environment. 
+Two important environment variables should be set depending on the environment you are working in. The URL and API key differ by environment.
 
 | Setting | Flag | Env var | Default |
 |---------|------|---------|---------|
