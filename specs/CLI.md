@@ -22,7 +22,8 @@ ollygarden
 │   └── insights <id>                   # GET /services/{id}/insights
 ├── insights
 │   ├── list                            # GET /insights
-│   └── get <id>                        # GET /insights/{id}
+│   ├── get <id>                        # GET /insights/{id}
+│   └── summary <id>                    # GET /insights/{id}/summary
 ├── analytics
 │   └── services                        # GET /analytics/services
 └── webhooks
@@ -211,7 +212,24 @@ ollygarden insights get <insight-id>
 
 ---
 
-### 3.10 `ollygarden analytics services`
+### 3.10 `ollygarden insights summary`
+
+```
+ollygarden insights summary <insight-id>
+```
+
+| Arg | Type | Required | Description |
+|---|---|---|---|
+| `insight-id` | UUID | **yes** | Insight ID |
+
+Returns an AI-generated summary for the insight. The summary includes contextual explanation of why the insight matters, its specific impact, and a recommended next step. Summaries are cached; on cache miss, a new one is generated via Lotus.
+
+| API | `GET /api/v1/insights/{id}/summary` |
+|---|---|
+
+---
+
+### 3.11 `ollygarden analytics services`
 
 ```
 ollygarden analytics services [flags]
@@ -226,7 +244,7 @@ ollygarden analytics services [flags]
 
 ---
 
-### 3.11 `ollygarden webhooks list`
+### 3.12 `ollygarden webhooks list`
 
 ```
 ollygarden webhooks list [flags]
@@ -242,7 +260,7 @@ ollygarden webhooks list [flags]
 
 ---
 
-### 3.12 `ollygarden webhooks create`
+### 3.13 `ollygarden webhooks create`
 
 ```
 ollygarden webhooks create --name <name> --url <https-url> [flags]
@@ -262,7 +280,7 @@ ollygarden webhooks create --name <name> --url <https-url> [flags]
 
 ---
 
-### 3.13 `ollygarden webhooks get`
+### 3.14 `ollygarden webhooks get`
 
 ```
 ollygarden webhooks get <webhook-id>
@@ -277,7 +295,7 @@ ollygarden webhooks get <webhook-id>
 
 ---
 
-### 3.14 `ollygarden webhooks update`
+### 3.15 `ollygarden webhooks update`
 
 ```
 ollygarden webhooks update <webhook-id> [flags]
@@ -300,7 +318,7 @@ All flags optional (partial update). Only provided flags are sent in the request
 
 ---
 
-### 3.15 `ollygarden webhooks delete`
+### 3.16 `ollygarden webhooks delete`
 
 ```
 ollygarden webhooks delete <webhook-id> [--confirm]
@@ -318,7 +336,7 @@ ollygarden webhooks delete <webhook-id> [--confirm]
 
 ---
 
-### 3.16 `ollygarden webhooks test`
+### 3.17 `ollygarden webhooks test`
 
 ```
 ollygarden webhooks test <webhook-id>
@@ -333,7 +351,7 @@ ollygarden webhooks test <webhook-id>
 
 ---
 
-### 3.17 `ollygarden webhooks deliveries list`
+### 3.18 `ollygarden webhooks deliveries list`
 
 ```
 ollygarden webhooks deliveries list <webhook-id> [flags]
@@ -350,7 +368,7 @@ ollygarden webhooks deliveries list <webhook-id> [flags]
 
 ---
 
-### 3.18 `ollygarden webhooks deliveries get`
+### 3.19 `ollygarden webhooks deliveries get`
 
 ```
 ollygarden webhooks deliveries get <webhook-id> <delivery-id>
@@ -405,6 +423,7 @@ ollygarden webhooks deliveries get <webhook-id> <delivery-id>
 | `DATABASE_ERROR` | 500 | 6 |
 | `INTERNAL_ERROR` | 500 | 6 |
 | `UPSTREAM_ERROR` | 502 | 6 |
+| `SERVICE_UNAVAILABLE` | 503 | 6 |
 
 ### Error Output
 
@@ -467,6 +486,9 @@ ollygarden insights list --status active --impact Critical --date-from 2026-02-1
 
 # 6. Get insight details and extract remediation instructions
 ollygarden insights get a1b2c3d4-5678-90ab-cdef-111111111111 --json | jq '.data.insight_type.remediation_instructions'
+
+# 6b. Get AI-generated summary for an insight
+ollygarden insights summary a1b2c3d4-5678-90ab-cdef-111111111111
 
 # 7. Create a webhook (disabled by default), test it, then enable
 ollygarden webhooks create \

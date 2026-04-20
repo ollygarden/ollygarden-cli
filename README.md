@@ -12,17 +12,32 @@ Or build from source:
 
 ```bash
 git clone https://github.com/ollygarden/ollygarden-cli.git
-cd ollygarden-cli
-go build -o ollygarden ./cmd/ollygarden
+go install ./cmd/ollygarden
 ```
 
-## Auth
+## Configuration
+
+2 important environment variables should be set depending on the enviroment that you are working in. The URL and API key are different for each environment. 
+
+| Setting | Flag | Env var | Default |
+|---------|------|---------|---------|
+| API key | — | `OLLYGARDEN_API_KEY` | *(required)* |
+| API URL | `--api-url` | `OLLYGARDEN_API_URL` | `https://api.ollygarden.cloud` |
+
+To point at a different environment (e.g. internal):
 
 ```bash
-export OLLYGARDEN_API_KEY=og_sk_...
+export OLLYGARDEN_API_URL=https://api.internal.ollygarden.cloud
+ollygarden services list
 ```
 
-No config files. No flags. Env var only.
+Or per-command:
+
+```bash
+ollygarden services list --api-url https://api.internal.ollygarden.cloud
+```
+
+Flag takes precedence over env var, which takes precedence over the default.
 
 ## Usage
 
@@ -31,6 +46,7 @@ ollygarden organization                        # your org tier, features, score
 ollygarden services list                       # all services
 ollygarden services get <service-id>           # single service details
 ollygarden insights list --status active       # active insights
+ollygarden insights summary <insight-id>       # AI-generated summary
 ollygarden analytics services                  # per-service analytics
 ollygarden webhooks create --name alerts \
   --url https://example.com/hook               # create a webhook
@@ -54,18 +70,6 @@ All list commands support `--limit` and `--offset`:
 ```bash
 ollygarden services list --limit 10 --offset 20
 ```
-
-## Exit Codes
-
-| Code | Meaning     |
-|------|-------------|
-| 0    | Success     |
-| 1    | General     |
-| 2    | Usage       |
-| 3    | Auth        |
-| 4    | Not found   |
-| 5    | Rate limit  |
-| 6    | Server      |
 
 ## Shell Completion
 
