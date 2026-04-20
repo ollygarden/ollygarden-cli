@@ -18,7 +18,7 @@ Bootstrap the Go CLI project: module, entry point, root command with global flag
 ### 3. `cmd/root.go` — Root command + global flags
 - `ollygarden` root command with `Use`, `Short`, `SilenceUsage: true`, `SilenceErrors: true`
 - Global persistent flags:
-  - `--api-url` (string, default `https://api.olly.garden`, env fallback `OLLYGARDEN_API_URL`)
+  - `--api-url` (string, default `https://api.ollygarden.cloud`, env fallback `OLLYGARDEN_API_URL`)
   - `--json` (bool, default false)
   - `-q, --quiet` (bool, default false)
   - `--version` (handled by Cobra's built-in `Version` field)

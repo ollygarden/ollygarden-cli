@@ -43,7 +43,7 @@ ollygarden
 | Flag | Env Var | Type | Default | Description |
 |---|---|---|---|---|
 | *(none)* | `OLLYGARDEN_API_KEY` | string | **required** | API key (env-only, no flag — avoids process table/shell history leaks) |
-| `--api-url` | `OLLYGARDEN_API_URL` | string | `https://api.olly.garden` | Base URL for the API |
+| `--api-url` | `OLLYGARDEN_API_URL` | string | `https://api.ollygarden.cloud` | Base URL for the API |
 | `--json` | | bool | `false` | Output raw JSON (full API response envelope) |
 | `-q, --quiet` | | bool | `false` | Suppress all non-essential output |
 | `-h, --help` | | bool | | Show help |
@@ -462,7 +462,7 @@ Flag value  >  Environment variable  >  Built-in default
 | Setting | Flag | Env Var | Default |
 |---|---|---|---|
 | API key | *(none)* | `OLLYGARDEN_API_KEY` | *(required)* |
-| API URL | `--api-url` | `OLLYGARDEN_API_URL` | `https://api.olly.garden` |
+| API URL | `--api-url` | `OLLYGARDEN_API_URL` | `https://api.ollygarden.cloud` |
 
 No config file for secrets (by design).
 

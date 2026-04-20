@@ -18,7 +18,7 @@
 # HTTP Client
 - Single shared client in `internal/client/` — all commands reuse it.
 - Auth: `Authorization: Bearer <key>` header. Key from `OLLYGARDEN_API_KEY` env var only. Never accept secrets as flags.
-- Base URL: `--api-url` flag > `OLLYGARDEN_API_URL` env > `https://api.olly.garden`.
+- Base URL: `--api-url` flag > `OLLYGARDEN_API_URL` env > `https://api.ollygarden.cloud`.
 - API base path: `/api/v1`. All endpoints are prefixed with this.
 - Response envelope: `{data, meta, links}`. Error envelope: `{error{code, message, details}, meta}`.
 - Parse API error codes and map to exit codes per `specs/CLI.md` §5.
