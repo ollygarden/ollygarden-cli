@@ -60,6 +60,28 @@
 - Prompt format: `Delete webhook "<name>" (id: <id>)? [y/N]:` — default No.
 - If a new DELETE endpoint is added, apply the same confirmation pattern.
 
+# Before Adding a New Command
+Before implementing a new CLI command, ensure the olive submodule is up to date so you're working against the latest API spec:
+
+```bash
+# 1. Update the olive submodule to latest main
+cd olive && git pull origin main && cd ..
+
+# 2. Check which API endpoints exist vs CLI commands
+# Compare olive/docs/openapi.json paths against specs/CLI.md command tree
+
+# 3. Verify the endpoint you need exists in olive/docs/openapi.json
+# If it doesn't, the endpoint must be added to olive first — the CLI cannot call endpoints that don't exist
+
+# 4. After confirming the endpoint exists, follow the 8-point checklist in specs/CLI_GUIDELINES.md §6
+```
+
+If the olive submodule was updated, commit the pointer change before starting implementation:
+```bash
+git add olive
+git commit -m "chore: update olive submodule to latest"
+```
+
 # Specs (read before any CLI work)
 - `specs/CLI.md` — command tree, flags, output format, exit codes, examples
 - `specs/CLI_GUIDELINES.md` — extension rules, 8-point checklist for new subcommands
