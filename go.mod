@@ -4,7 +4,7 @@ go 1.24.5
 
 require (
 	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.9
+	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/term v0.40.0
 )
