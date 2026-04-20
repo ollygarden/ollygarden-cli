@@ -168,37 +168,16 @@ When the OpenAPI spec adds a new endpoint:
 - [ ] **Destructive?** — if DELETE or irreversible, add confirmation flow per section 5
 - [ ] **Update `CLI.md`** — add the command to the command tree and full subcommand reference
 - [ ] **Add example** — at least one example invocation in `CLI.md` section 8
-- [ ] **Check types** — run `go generate ./internal/api/...` if the spec added/changed response models
+- [ ] **Check types** — define response structs in the command file matching the API schema in `olive/docs/openapi.json`
 - [ ] **Test** — verify human output, `--json` output, error cases, and `--quiet` behavior
 
-## 7. OpenAPI Type Sync
+## 7. API Types
 
-API request/response types are generated from the OpenAPI spec, not hand-written.
+API response types are currently hand-defined inline in each command file (e.g., `insightDetail` in `insights_get.go`). The source of truth for field names and types is `olive/docs/openapi.json`.
 
-| Item | Value |
-|---|---|
-| **Source spec** | `olive/docs/openapi.json` |
-| **Generator** | [`oapi-codegen`](https://github.com/oapi-codegen/oapi-codegen) v2 (types-only) |
-| **Config** | `oapi-codegen.yaml` |
-| **Output** | `internal/api/types.gen.go` |
-| **Regenerate** | `go generate ./internal/api/...` |
+When adding a new command:
+1. Check the response schema in `olive/docs/openapi.json`
+2. Define a struct in the command file matching the fields you need for human-mode display
+3. `--json` mode passes the raw API envelope through unchanged (no struct needed)
 
-### Pre-processing
-
-`scripts/prep-openapi.sh` strips `models.`/`api.` prefixes from the spec before generation so Go type names stay clean.
-
-### What's excluded
-
-Envelope types (`DataEnvelope`, `ErrorEnvelope`, `Meta`, `Links`) already live in `internal/client/` and are excluded from generation to avoid duplication.
-
-### Usage in commands
-
-Commands import generated types for full structs, then pick fields for human-mode display. `--json` mode passes the raw envelope through unchanged.
-
-### CI check
-
-```bash
-go generate ./... && git diff --exit-code
-```
-
-Fails if generated code is out of sync with the spec.
+**Future improvement**: Generate types from the OpenAPI spec via [`oapi-codegen`](https://github.com/oapi-codegen/oapi-codegen) into `internal/api/types.gen.go`.

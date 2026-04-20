@@ -12,8 +12,7 @@
 - Shared logic lives in `internal/`: HTTP client (`internal/client/`), output formatter (`internal/output/`), auth (`internal/auth/`).
 - Use `spf13/cobra` for command registration. Every command must set `Use`, `Short`, `Args`, and `RunE`.
 - Keep command files thin: parse flags → call client → format output → handle errors. No business logic in `cmd/`.
-- `internal/api/types.gen.go` — generated types from OpenAPI spec. Never edit directly.
-- Run `go generate ./internal/api/...` after spec changes.
+- API response types are currently hand-defined inline in each command file (e.g., `insightDetail`, `insightSummaryDetail`). A future improvement is to generate them from `olive/docs/openapi.json` via `oapi-codegen`.
 
 # HTTP Client
 - Single shared client in `internal/client/` — all commands reuse it.
