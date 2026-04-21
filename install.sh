@@ -1,18 +1,45 @@
 #!/bin/sh
-# Install the ollygarden CLI.
+# Install the ollygarden CLI on macOS or Linux.
 #
-# Usage:
+# Quick install:
 #   curl -fsSL https://raw.githubusercontent.com/ollygarden/ollygarden-cli/main/install.sh | sh
 #
-# Environment:
-#   OLLYGARDEN_VERSION       Pin to a specific version (e.g. "v0.1.0"). Defaults to latest release.
-#   OLLYGARDEN_INSTALL_DIR   Install directory. Defaults to "$HOME/.local/bin".
+# Customize:
+#   OLLYGARDEN_VERSION=v0.1.0  curl ... | sh        # pin a version
+#   OLLYGARDEN_INSTALL_DIR=/usr/local/bin curl ... | sh
+#
+# For full help:  curl -fsSL <url> -o install.sh && sh install.sh --help
 
 set -eu
 
 REPO="ollygarden/ollygarden-cli"
 BIN_NAME="ollygarden"
 INSTALL_DIR="${OLLYGARDEN_INSTALL_DIR:-$HOME/.local/bin}"
+
+usage() {
+    cat <<EOF
+Install the ollygarden CLI.
+
+Usage:
+  sh install.sh [--help]
+
+Environment variables:
+  OLLYGARDEN_VERSION       Pin to a specific release tag (e.g. v0.1.0).
+                           Defaults to the latest release.
+  OLLYGARDEN_INSTALL_DIR   Directory to install into.
+                           Defaults to \$HOME/.local/bin.
+
+Supports macOS and Linux on amd64 and arm64.
+For Windows, download the zip from:
+  https://github.com/$REPO/releases/latest
+EOF
+}
+
+case "${1:-}" in
+    -h|--help) usage; exit 0 ;;
+    "") ;;
+    *) printf 'Error: unknown argument: %s\n\n' "$1" >&2; usage >&2; exit 2 ;;
+esac
 
 log()  { printf '%s\n' "$*" >&2; }
 fail() { log "Error: $*"; exit 1; }
@@ -90,6 +117,11 @@ mv "$tmp/$BIN_NAME" "$INSTALL_DIR/$BIN_NAME"
 chmod +x "$INSTALL_DIR/$BIN_NAME"
 
 log "Installed $BIN_NAME $version to $INSTALL_DIR/$BIN_NAME"
+
+# Strip macOS quarantine so Gatekeeper doesn't block the unsigned binary.
+if [ "$os" = "darwin" ] && command -v xattr >/dev/null 2>&1; then
+    xattr -d com.apple.quarantine "$INSTALL_DIR/$BIN_NAME" 2>/dev/null || true
+fi
 
 case ":$PATH:" in
     *":$INSTALL_DIR:"*) ;;
