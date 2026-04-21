@@ -30,6 +30,8 @@ Environment variables:
                            Defaults to \$HOME/.local/bin.
   GITHUB_TOKEN             Optional GitHub token for resolving the latest
                            release. Only needed if you hit API rate limits.
+                           If unset, falls back to \`gh auth token\` when
+                           the GitHub CLI is installed.
 
 Supports macOS and Linux on amd64 and arm64.
 For Windows, download the zip from:
@@ -73,16 +75,19 @@ case "$arch_raw" in
     *)             fail "unsupported architecture: $arch_raw" ;;
 esac
 
-# Resolve version. GITHUB_TOKEN is used if set (raises API rate limits from
-# 60/hr to 5000/hr — useful on shared IPs, corporate networks, and CI).
+# Resolve version. Auth is used if available to raise API rate limits from
+# 60/hr to 5000/hr. Order: GITHUB_TOKEN env var → `gh auth token` if gh is
+# installed → anonymous (may hit rate limits on shared IPs / CI).
 if [ -n "${OLLYGARDEN_VERSION:-}" ]; then
     version="$OLLYGARDEN_VERSION"
 else
     log "Resolving latest release..."
-    auth_header=""
-    if [ -n "${GITHUB_TOKEN:-}" ]; then
-        auth_header="Authorization: Bearer $GITHUB_TOKEN"
+    token="${GITHUB_TOKEN:-}"
+    if [ -z "$token" ] && command -v gh >/dev/null 2>&1; then
+        token="$(gh auth token 2>/dev/null || true)"
     fi
+    auth_header=""
+    [ -n "$token" ] && auth_header="Authorization: Bearer $token"
     version="$(curl -fsSL ${auth_header:+-H "$auth_header"} \
         "https://api.github.com/repos/$REPO/releases/latest" \
         | sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' \
