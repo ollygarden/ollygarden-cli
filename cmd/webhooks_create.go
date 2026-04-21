@@ -37,8 +37,14 @@ func init() {
 	webhooksCreateCmd.Flags().StringVar(&webhooksCreateMinSeverity, "min-severity", "Low", "Minimum severity: Low, Normal, Important, Critical")
 	webhooksCreateCmd.Flags().BoolVar(&webhooksCreateEnabled, "enabled", false, "Enable the webhook")
 
-	webhooksCreateCmd.MarkFlagRequired("name")
-	webhooksCreateCmd.MarkFlagRequired("url")
+	// MarkFlagRequired only errors if the flag doesn't exist — panic here surfaces
+	// programmer error at startup rather than silently skipping the requirement.
+	if err := webhooksCreateCmd.MarkFlagRequired("name"); err != nil {
+		panic(err)
+	}
+	if err := webhooksCreateCmd.MarkFlagRequired("url"); err != nil {
+		panic(err)
+	}
 }
 
 var validSeverities = map[string]bool{

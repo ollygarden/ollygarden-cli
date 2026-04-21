@@ -20,12 +20,12 @@ type analyticsServicesData struct {
 }
 
 type analyticsServiceItem struct {
-	Name          string                    `json:"name"`
-	Namespace     string                    `json:"namespace"`
-	Environment   string                    `json:"environment"`
-	TotalBytes    int64                     `json:"total_bytes"`
-	TotalPercent  float64                   `json:"total_percent"`
-	LatestVersion *analyticsServiceVersion  `json:"latest_version"`
+	Name          string                   `json:"name"`
+	Namespace     string                   `json:"namespace"`
+	Environment   string                   `json:"environment"`
+	TotalBytes    int64                    `json:"total_bytes"`
+	TotalPercent  float64                  `json:"total_percent"`
+	LatestVersion *analyticsServiceVersion `json:"latest_version"`
 }
 
 type analyticsServiceVersion struct {

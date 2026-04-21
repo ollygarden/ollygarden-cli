@@ -168,15 +168,15 @@ When the OpenAPI spec adds a new endpoint:
 - [ ] **Destructive?** — if DELETE or irreversible, add confirmation flow per section 5
 - [ ] **Update `CLI.md`** — add the command to the command tree and full subcommand reference
 - [ ] **Add example** — at least one example invocation in `CLI.md` section 8
-- [ ] **Check types** — define response structs in the command file matching the API schema in `olive/docs/openapi.json`
+- [ ] **Check types** — define response structs in the command file matching the API schema at `https://api.ollygarden.cloud/openapi.json`
 - [ ] **Test** — verify human output, `--json` output, error cases, and `--quiet` behavior
 
 ## 7. API Types
 
-API response types are currently hand-defined inline in each command file (e.g., `insightDetail` in `insights_get.go`). The source of truth for field names and types is `olive/docs/openapi.json`.
+API response types are currently hand-defined inline in each command file (e.g., `insightDetail` in `insights_get.go`). The source of truth for field names and types is the live OpenAPI schema at `https://api.ollygarden.cloud/openapi.json`.
 
 When adding a new command:
-1. Check the response schema in `olive/docs/openapi.json`
+1. Fetch and inspect the response schema: `curl -fsSL https://api.ollygarden.cloud/openapi.json | jq '.paths."/your/endpoint"'`
 2. Define a struct in the command file matching the fields you need for human-mode display
 3. `--json` mode passes the raw API envelope through unchanged (no struct needed)
 

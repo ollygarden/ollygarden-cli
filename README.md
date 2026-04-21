@@ -1,18 +1,39 @@
 # ollygarden
 
-CLI client for the OllyGarden observability API. Query services, insights, analytics, and manage webhooks from your terminal.
+CLI client for the OllyGarden REST API. Query services, insights, analytics, and manage webhooks from your terminal.
 
 ## Install
+
+### macOS / Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ollygarden/ollygarden-cli/main/install.sh | sh
+```
+
+Installs to `$HOME/.local/bin` by default. Override with `OLLYGARDEN_INSTALL_DIR` or pin a version with `OLLYGARDEN_VERSION=v0.1.0`.
+
+On macOS, binaries are unsigned. If Gatekeeper blocks the first run:
+
+```bash
+xattr -d com.apple.quarantine "$(command -v ollygarden)"
+```
+
+### Windows
+
+Download the matching `ollygarden_<version>_windows_<arch>.zip` from the [latest release](https://github.com/ollygarden/ollygarden-cli/releases/latest), extract `ollygarden.exe`, and place it on your `PATH`.
+
+### From source
 
 ```bash
 go install github.com/ollygarden/ollygarden-cli/cmd/ollygarden@latest
 ```
 
-Or build from source:
+Note: `go install` builds report version `dev`. Use the install script or release archives for versioned builds.
+
+Check the installed version:
 
 ```bash
-git clone https://github.com/ollygarden/ollygarden-cli.git
-go install ./cmd/ollygarden
+ollygarden version
 ```
 
 ## Configuration
