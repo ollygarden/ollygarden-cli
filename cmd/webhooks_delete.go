@@ -19,7 +19,7 @@ var webhooksDeleteConfirm bool
 
 // Testability hooks for TTY detection and stdin reading.
 var (
-	stdinIsTerminal = func() bool { return term.IsTerminal(int(os.Stdin.Fd())) }
+	stdinIsTerminal           = func() bool { return term.IsTerminal(int(os.Stdin.Fd())) }
 	stdinReader     io.Reader = os.Stdin
 )
 

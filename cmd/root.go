@@ -15,17 +15,19 @@ var (
 	jsonMode bool
 	quiet    bool
 	version  = "dev"
+	commit   = "none"
+	date     = "unknown"
 )
 
 var rootCmd = &cobra.Command{
 	Use:           "ollygarden",
-	Short:         "CLI client for the OllyGarden observability API",
+	Short:         "CLI client for the OllyGarden API",
 	Version:       "dev",
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Skip auth check for help and version
-		if cmd.Name() == "help" || cmd.Name() == "ollygarden" {
+		// Skip auth check for help, version, and root (no subcommand).
+		if cmd.Name() == "help" || cmd.Name() == "version" || cmd.Name() == "ollygarden" {
 			return nil
 		}
 
@@ -60,9 +62,11 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress non-essential output")
 }
 
-// SetVersion sets the CLI version string.
-func SetVersion(v string) {
+// SetBuildInfo sets the CLI build metadata. Values come from ldflags at release time.
+func SetBuildInfo(v, c, d string) {
 	version = v
+	commit = c
+	date = d
 	rootCmd.Version = v
 	client.SetVersion(v)
 }

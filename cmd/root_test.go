@@ -33,11 +33,11 @@ func TestHelpShowsCommandGroups(t *testing.T) {
 }
 
 func TestVersionFlag(t *testing.T) {
-	SetVersion("1.2.3")
-	defer SetVersion("dev")
+	SetBuildInfo("1.2.3", "abc123", "2026-04-21T00:00:00Z")
+	defer SetBuildInfo("dev", "none", "unknown")
 
 	// Cobra's --version flag works correctly in real execution (verified via binary).
-	// In-process test: verify SetVersion wires through to rootCmd.Version.
+	// In-process test: verify SetBuildInfo wires through to rootCmd.Version.
 	assert.Equal(t, "1.2.3", rootCmd.Version)
 }
 

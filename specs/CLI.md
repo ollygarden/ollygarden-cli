@@ -1,6 +1,6 @@
 # OllyGarden CLI Specification v1
 
-CLI client for the OllyGarden observability REST API.
+CLI client for the OllyGarden REST API.
 
 ## USAGE
 
