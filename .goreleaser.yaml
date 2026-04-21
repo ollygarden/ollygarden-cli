@@ -44,26 +44,6 @@ checksum:
   name_template: checksums.txt
   algorithm: sha256
 
-# Detached GPG signature over checksums.txt.
-# Requires secrets: GPG_PRIVATE_KEY (ASCII-armored), GPG_FINGERPRINT, GPG_PASSPHRASE (optional).
-# The release workflow imports the key before running goreleaser.
-signs:
-  - id: checksums
-    artifacts: checksum
-    cmd: gpg
-    args:
-      - "--batch"
-      - "--yes"
-      - "--pinentry-mode=loopback"
-      - "--passphrase"
-      - "{{ .Env.GPG_PASSPHRASE }}"
-      - "--local-user"
-      - "{{ .Env.GPG_FINGERPRINT }}"
-      - "--output"
-      - "${signature}"
-      - "--detach-sign"
-      - "${artifact}"
-
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
 
