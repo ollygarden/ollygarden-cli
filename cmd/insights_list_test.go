@@ -63,6 +63,7 @@ func TestInsightsListHuman(t *testing.T) {
 	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/api/v1/insights", r.URL.Path)
 		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "-detected_ts", r.URL.Query().Get("sort"))
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(body))
 	})

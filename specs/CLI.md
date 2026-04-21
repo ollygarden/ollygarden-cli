@@ -190,7 +190,7 @@ ollygarden insights list [flags]
 | `--impact` | string | | no | Comma-separated: `Critical`, `Important`, `Normal`, `Low` |
 | `--date-from` | RFC3339 | | no | Filter created_at >= |
 | `--date-to` | RFC3339 | | no | Filter created_at <= |
-| `--sort` | string | `-created_at` | no | Prefix `+`/`-` for ASC/DESC. Fields: `created_at`, `detected_ts`, `updated_at`, `impact`, `signal_type` |
+| `--sort` | string | `-detected_ts` | no | Prefix `+`/`-` for ASC/DESC. Fields: `detected_ts`, `created_at`, `updated_at`, `impact`, `signal_type` |
 
 | API | `GET /api/v1/insights?limit=&offset=&service_id=&status=&signal_type=&impact=&date_from=&date_to=&sort=` |
 |---|---|

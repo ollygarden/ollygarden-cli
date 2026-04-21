@@ -48,7 +48,7 @@ func init() {
 	insightsListCmd.Flags().StringVar(&insightsListImpact, "impact", "", "Filter by impact (comma-separated: Critical, Important, Normal, Low)")
 	insightsListCmd.Flags().StringVar(&insightsListDateFrom, "date-from", "", "Filter from date (RFC3339)")
 	insightsListCmd.Flags().StringVar(&insightsListDateTo, "date-to", "", "Filter to date (RFC3339)")
-	insightsListCmd.Flags().StringVar(&insightsListSort, "sort", "-created_at", "Sort field (prefix +/- for asc/desc: created_at, detected_ts, updated_at, impact, signal_type)")
+	insightsListCmd.Flags().StringVar(&insightsListSort, "sort", "-detected_ts", "Sort field (prefix +/- for asc/desc: detected_ts, created_at, updated_at, impact, signal_type)")
 }
 
 func runInsightsList(cmd *cobra.Command, args []string) error {
