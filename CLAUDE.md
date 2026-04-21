@@ -1,7 +1,7 @@
 # General
 - `specs/CLI.md` is the source of truth for every command. Read it before implementing or modifying any subcommand.
 - `specs/CLI_GUIDELINES.md` defines extension rules. Follow the 8-point checklist (§6) when adding a subcommand.
-- `olive/` is a read-only git submodule (the REST API). Never modify files inside `olive/`.
+- API schemas live at `https://api.ollygarden.cloud/openapi.json` — fetch it when you need request/response types (see "Before Adding a New Command" below).
 - Before defining a new type, helper, or utility, check whether one already exists in `internal/`. Prefer reuse over duplication.
 - Add code comments to explain the **why**, not the **what**.
 - After any code change, run `go build ./... && go test ./... && go vet ./...` before finishing.
@@ -12,7 +12,7 @@
 - Shared logic lives in `internal/`: HTTP client (`internal/client/`), output formatter (`internal/output/`), auth (`internal/auth/`).
 - Use `spf13/cobra` for command registration. Every command must set `Use`, `Short`, `Args`, and `RunE`.
 - Keep command files thin: parse flags → call client → format output → handle errors. No business logic in `cmd/`.
-- API response types are currently hand-defined inline in each command file (e.g., `insightDetail`, `insightSummaryDetail`). A future improvement is to generate them from `olive/docs/openapi.json` via `oapi-codegen`.
+- API response types are currently hand-defined inline in each command file (e.g., `insightDetail`, `insightSummaryDetail`). A future improvement is to generate them from `https://api.ollygarden.cloud/openapi.json` via `oapi-codegen`.
 
 # HTTP Client
 - Single shared client in `internal/client/` — all commands reuse it.
@@ -60,28 +60,22 @@
 - If a new DELETE endpoint is added, apply the same confirmation pattern.
 
 # Before Adding a New Command
-Before implementing a new CLI command, ensure the olive submodule is up to date so you're working against the latest API spec:
+Before implementing a new CLI command, fetch the latest OpenAPI schema so you're working against the live API:
 
 ```bash
-# 1. Update the olive submodule to latest main
-cd olive && git pull origin main && cd ..
+# 1. Fetch the current schema (cache it locally, don't commit it)
+curl -fsSL https://api.ollygarden.cloud/openapi.json -o /tmp/openapi.json
 
-# 2. Check which API endpoints exist vs CLI commands
-# Compare olive/docs/openapi.json paths against specs/CLI.md command tree
+# 2. Check which endpoints exist vs CLI commands
+# Compare /tmp/openapi.json paths against specs/CLI.md command tree
 
-# 3. Verify the endpoint you need exists in olive/docs/openapi.json
-# If it doesn't, the endpoint must be added to olive first — the CLI cannot call endpoints that don't exist
+# 3. Verify the endpoint you need exists in /tmp/openapi.json
+# If it doesn't, the endpoint must be added to the API first — the CLI cannot call endpoints that don't exist
 
 # 4. After confirming the endpoint exists, follow the 8-point checklist in specs/CLI_GUIDELINES.md §6
-```
-
-If the olive submodule was updated, commit the pointer change before starting implementation:
-```bash
-git add olive
-git commit -m "chore: update olive submodule to latest"
 ```
 
 # Specs (read before any CLI work)
 - `specs/CLI.md` — command tree, flags, output format, exit codes, examples
 - `specs/CLI_GUIDELINES.md` — extension rules, 8-point checklist for new subcommands
-- `olive/docs/openapi.json` — API schemas, request/response types
+- `https://api.ollygarden.cloud/openapi.json` — API schemas, request/response types (remote, fetch on demand)

@@ -511,10 +511,10 @@ ollygarden services grouped --sort name-asc --json | jq '.data[].name'
 
 ## 9. Implementation Notes
 
-- **Language**: Go with Cobra (matches existing olive submodule)
+- **Language**: Go with Cobra
 - **API base path**: `/api/v1`
 - **Auth token format**: `og_sk_{6char}_{32hex}`
 - **Rate limit**: 60 req/min per key
 - **Response envelope**: `{data, meta{timestamp, total, has_more, trace_id}, links}`
 - **Error envelope**: `{error{code, message, details}, meta{timestamp, trace_id}}`
-- **Types**: API response types are currently hand-defined inline in each command file. Future: generate from `olive/docs/openapi.json` via `oapi-codegen`.
+- **Types**: API response types are currently hand-defined inline in each command file. Future: generate from `https://api.ollygarden.cloud/openapi.json` via `oapi-codegen`.

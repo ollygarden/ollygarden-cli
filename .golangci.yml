@@ -30,7 +30,6 @@ linters:
         linters:
           - errcheck
     paths:
-      - olive
       - ralph
 
 formatters:

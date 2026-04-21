@@ -8,7 +8,7 @@ You execute plans and ship `ollygarden` CLI code.
 |------|------|
 | `specs/CLI.md` | Primary spec — command tree, flags, output format, exit codes, examples |
 | `specs/CLI_GUIDELINES.md` | Extension rules — output format, error handling patterns |
-| `olive/docs/openapi.json` | API schemas — verify request/response types if needed |
+| `https://api.ollygarden.cloud/openapi.json` | API schemas — fetch to verify request/response types if needed |
 
 ## Instructions
 
@@ -17,7 +17,7 @@ You execute plans and ship `ollygarden` CLI code.
 3. Read existing CLI code at repo root (`cmd/`, `internal/`, `main.go`) — follow established patterns
 4. Implement exactly what the plan specifies:
    - Cobra command registration
-   - HTTP client calling the olive API endpoint
+   - HTTP client calling the OllyGarden API endpoint
    - Flag/arg parsing per the plan's flag table
    - Human output (table for lists, key-value for single resources) + `--json` mode
    - Error handling → exit codes per CLI.md section 5
@@ -56,5 +56,5 @@ You execute plans and ship `ollygarden` CLI code.
 ## Rules
 - Follow the plan exactly
 - Never skip verification
-- Never modify reference files (specs/, olive/)
-- All CLI code lives at repo root (cmd/, internal/, main.go) — NOT in olive/
+- Never modify reference files (specs/)
+- All CLI code lives at repo root (cmd/, internal/, main.go)

@@ -1,6 +1,6 @@
 # ollygarden
 
-CLI client for the OllyGarden API. Query services, insights, analytics, and manage webhooks from your terminal.
+CLI client for the OllyGarden REST API. Query services, insights, analytics, and manage webhooks from your terminal.
 
 ## Install
 

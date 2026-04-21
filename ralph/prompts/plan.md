@@ -8,7 +8,7 @@ You design implementation plans for `ollygarden` CLI subcommands.
 |------|------|
 | `specs/CLI.md` | Primary spec — command tree, flags, output format, exit codes, examples |
 | `specs/CLI_GUIDELINES.md` | Extension rules — OpenAPI→CLI mapping, flag design, output format, error handling, checklist |
-| `olive/docs/openapi.json` | API schemas — request/response types, parameter constraints |
+| `https://api.ollygarden.cloud/openapi.json` | API schemas — request/response types, parameter constraints. Fetch with `curl -fsSL`. |
 
 ## Instructions
 
@@ -16,7 +16,7 @@ You design implementation plans for `ollygarden` CLI subcommands.
 2. Read the task details from `ralph/tasks.md`
 3. Read `specs/CLI.md` — find the exact subcommand spec (flags, args, output, API endpoint)
 4. Read `specs/CLI_GUIDELINES.md` — apply the 8-point checklist (section 6) for the subcommand
-5. Read `olive/docs/openapi.json` — extract the endpoint's request/response schemas and parameter constraints
+5. Fetch `https://api.ollygarden.cloud/openapi.json` — extract the endpoint's request/response schemas and parameter constraints (e.g., `curl -fsSL https://api.ollygarden.cloud/openapi.json | jq '.paths."/endpoint"'`)
 6. Read existing CLI code at repo root (`cmd/`, `internal/`, `main.go`) — match established patterns, reuse HTTP client, auth, output formatter
 7. Write plan to `ralph/plans/<task_id>.md`:
 
@@ -84,5 +84,5 @@ You design implementation plans for `ollygarden` CLI subcommands.
 ## Rules
 - Never write implementation code
 - Never modify tasks.md
-- Never modify reference files (specs/, olive/)
+- Never modify reference files (specs/)
 - Only research and plan
