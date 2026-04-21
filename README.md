@@ -4,37 +4,17 @@ CLI client for the OllyGarden REST API. Query services, insights, analytics, and
 
 ## Install
 
-### macOS / Linux
+**macOS / Linux**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ollygarden/ollygarden-cli/main/install.sh | sh
 ```
 
-Installs to `$HOME/.local/bin` by default. Override with `OLLYGARDEN_INSTALL_DIR` or pin a version with `OLLYGARDEN_VERSION=v0.1.0`.
+**Windows** — download the zip from [releases](https://github.com/ollygarden/ollygarden-cli/releases/latest), extract, put `ollygarden.exe` on your `PATH`.
 
-On macOS, binaries are unsigned. If Gatekeeper blocks the first run:
+**From source** — `go install github.com/ollygarden/ollygarden-cli/cmd/ollygarden@latest` (reports version `dev`).
 
-```bash
-xattr -d com.apple.quarantine "$(command -v ollygarden)"
-```
-
-### Windows
-
-Download the matching `ollygarden_<version>_windows_<arch>.zip` from the [latest release](https://github.com/ollygarden/ollygarden-cli/releases/latest), extract `ollygarden.exe`, and place it on your `PATH`.
-
-### From source
-
-```bash
-go install github.com/ollygarden/ollygarden-cli/cmd/ollygarden@latest
-```
-
-Note: `go install` builds report version `dev`. Use the install script or release archives for versioned builds.
-
-Check the installed version:
-
-```bash
-ollygarden version
-```
+To pin a version or customize the install dir, see `install.sh --help`.
 
 ## Configuration
 
