@@ -19,15 +19,17 @@ func TestPath_EnvVarOverride(t *testing.T) {
 
 func TestPath_DefaultUsesUserConfigDir(t *testing.T) {
 	t.Setenv(ConfigFileEnvVar, "")
-	got, err := Path()
-	if err != nil {
-		t.Fatalf("Path(): %v", err)
-	}
+
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		t.Skipf("os.UserConfigDir unavailable on this host: %v", err)
 	}
 	want := filepath.Join(dir, ConfigFolder, ConfigFileName)
+
+	got, err := Path()
+	if err != nil {
+		t.Fatalf("Path(): %v", err)
+	}
 	if got != want {
 		t.Errorf("Path(): got %q, want %q", got, want)
 	}
