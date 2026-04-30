@@ -27,10 +27,20 @@ The CLI's primary consumer is coding agents (Claude Code and similar). The curre
 - TLS / mTLS configuration.
 - Per-context defaults (e.g. default `--limit`, default service ID). Schema is intentionally just credentials; future fields can be added in a backwards-compatible point release.
 - A new "network/transient" exit code. Current network failures roll into exit 1; this is a separate, CLI-wide discussion.
+- An `ollygarden auth token` command. `gh` ships this and it's the cleanest agent primitive ("`OLLYGARDEN_API_KEY=$(ollygarden auth token --context internal) some-other-tool`"). Excluded from v1 to keep scope tight; agents already have env var + on-disk config. Add when a concrete chained-tool use case appears.
 
-## Reference
+## Considered alternatives (rejected)
 
-Modeled on `grafana/gcx`'s `internal/config` (`loader.go`, `types.go`, `path.go`) and `internal/login` (`login.go`), trimmed to fit Olive's API-key-only auth model. We borrow: layered loader idea, secret-tagged struct fields, kubeconfig-style multi-context, `0600` mode, env-var-still-wins precedence, atomic-write pattern. We skip: PKCE flow, sentinel-retry pattern, TLS, system+local layers, refresh-token machinery.
+- **JSON instead of YAML for the config file.** Mercury uses JSON. Pros: no parser quirks, `jq`-friendly, every language has stdlib support. Cons: less convention-aligned with kubeconfig/gcx — the "kubeconfig-style multi-context" mental model expects YAML, and we already chose YAML to mirror the `--kebab-case` flag convention. Both are workable; we kept YAML for consistency with the gcx reference and prevailing convention for this kind of file. Revisit only if a real friction emerges.
+*(Earlier draft considered hand-rolled `$HOME/.config/ollygarden/` to mirror gcx; we flipped to `os.UserConfigDir()` because it's more idiomatic Go and cross-platform-correct out of the box. macOS users get `~/Library/Application Support/ollygarden/`, which is the platform-native location even if some dev-tool authors prefer `~/.config`. The stdlib helper is the right call.)*
+
+## References and lessons learned
+
+This design draws on three CLIs we surveyed:
+
+- **`grafana/gcx`** (`internal/config`, `internal/login`) — primary structural reference. We borrow: kubeconfig-style multi-context, secret-tagged struct fields, `0600` mode, env-var-still-wins precedence, atomic-write pattern. We skip: PKCE flow, sentinel-retry pattern, TLS, system+local config layers, refresh-token machinery.
+- **`cli/cli` (`gh`)** — the gold-standard CLI auth UX. We adopt: schema versioning (gh uses a `version` key + a `Migrate` system; we'll start with the field and add migration logic when we need it). We deliberately skip: OS keyring as the *default* (we have headless-Linux/container/CI agent users), multi-account-per-host (out of scope), `--show-token` on `auth status` (we'd have to expose it through a separate `auth token` command if we add one later — explicit YAGNI for v1), `auth setupgit` / `gitcredential` (irrelevant). We note for future work: `gh auth token` is a strong agent primitive that prints the active token to stdout — worth adding once we have a use case beyond `OLLYGARDEN_API_KEY=$(...)`.
+- **`MercuryTechnologies/mercury-cli`** (`internal/auth/credentials.go`) — confirms the keyring-first + plaintext-fallback pattern we describe in the "future storage backends" section below. We adopt three real-world details from Mercury's implementation: deleting the credentials file when the last context is removed (cleaner state), being honest with the user when the plaintext fallback was used ("Storage: plaintext file — system keyring unavailable"), and using a package-level `pathFunc` test seam so unit tests can redirect writes into `t.TempDir()`. We also note Mercury's 3-second timeout wrapping every keyring operation: "Timeouts protect against Secret Service / kwalletd hangs on Linux." When we add keyring later, we'll need this. Mercury chose JSON over YAML for the credentials file and `os.UserConfigDir()` over hand-rolled `$HOME/.config/` — both are reasonable alternatives we considered and explicitly did not adopt (see "Considered alternatives" below).
 
 ## Approach
 
@@ -79,16 +89,20 @@ Existing commands (`services`, `insights`, `analytics`, `webhooks`, `organizatio
 ### Path resolution
 
 1. `$OLLYGARDEN_CONFIG` (full path, env override — for agent sandboxes that want a scoped file).
-2. `$HOME/.config/ollygarden/config.yaml` (default).
+2. `filepath.Join(os.UserConfigDir(), "ollygarden", "config.yaml")` (default).
 
-No XDG / macOS Application Support fallback. One path, one bug surface.
+`os.UserConfigDir()` returns the platform-correct directory: `$XDG_CONFIG_HOME` (or `~/.config`) on Linux, `~/Library/Application Support` on macOS, `%AppData%` on Windows. Stdlib, no extra dependency, no hand-rolled `$HOME` joining. Mercury made the same choice.
 
 ### Format
 
 YAML. File mode `0600`. Parent dir created with `0700`. Writes are atomic: write to `config.yaml.tmp` in the same dir → `fsync` → `os.Rename`. If `fsync` fails on an exotic filesystem, log a debug warning and continue.
 
 ```yaml
-# ~/.config/ollygarden/config.yaml
+# {os.UserConfigDir()}/ollygarden/config.yaml
+# Linux:   ~/.config/ollygarden/config.yaml
+# macOS:   ~/Library/Application Support/ollygarden/config.yaml
+# Windows: %AppData%\ollygarden\config.yaml
+version: 1
 current-context: prod
 contexts:
   prod:
@@ -105,6 +119,7 @@ contexts:
 // internal/config/config.go
 
 type Config struct {
+    Version        int                 `yaml:"version"`
     CurrentContext string              `yaml:"current-context"`
     Contexts       map[string]*Context `yaml:"contexts"`
     // Source is the path the file was loaded from. Not serialized.
@@ -118,14 +133,36 @@ type Context struct {
 }
 ```
 
+**Schema versioning:** `version: 1` is written at every save. Loader behavior:
+
+- Missing `version` → assumed `1` (forward-compat for files written by an early prerelease).
+- `version: 1` → load directly into the struct above.
+- `version > 1` → return a clear error: `Config file version N is newer than this CLI supports. Upgrade ollygarden CLI.` (Exit 7, `CONFIG_UNREADABLE`.)
+
+The version field exists so we can introduce a real `Migrate` system later (à la `gh`'s `internal/config/migration/`) without writing a "detect schema shape" parser. Cost today: one int field + a one-line write and a one-switch read.
+
 Field naming: kebab-case in YAML to match the existing `--kebab-case` flag convention (CLI_GUIDELINES.md §2).
 
 ### Behaviors
 
-- Empty file or missing file → `Config{Contexts: map[string]*Context{}}`, no error. First `auth login` writes it.
+- Empty file or missing file → `Config{Version: 1, Contexts: map[string]*Context{}}`, no error. First `auth login` writes it.
 - Corrupted YAML → return a typed error pointing at the file path. Do not auto-recover.
 - Unknown fields → ignore (forward compat).
 - Windows file modes: POSIX modes do not apply the same way; mode `0600` is best-effort. Documented limitation, not enforced in tests.
+- **When the last context is removed** (via `auth logout` or `auth logout --all`), delete the config file rather than leaving an empty `contexts: {}`. Mercury does this; cleaner state for the "I'm completely logged out" case. A subsequent `auth login` recreates the file.
+
+### Future storage backends (architectural intent, not v1 work)
+
+`internal/config` exposes a `Source` interface that `Load` and `Write` go through. v1 ships a single `FileSource` implementation (`os.ReadFile` / atomic `os.Rename`). This is the same seam `gh` uses for keyring fallback and Mercury uses for keyring + plaintext-file dual storage.
+
+A future PR can add a `KeyringSource` that keeps non-secret fields (`version`, `current-context`, per-context `api-url`) in the YAML file but delegates `api-key` to the OS keyring (macOS Keychain, Linux Secret Service via `libsecret`, Windows Credential Manager). The schema doesn't change; resolution stays the same; only the `Source` implementation differs.
+
+Two implementation lessons recorded now so we don't relearn them:
+
+- **3-second timeout on every keyring operation.** Mercury wraps every `keyring.Get`/`Set`/`Delete` in a goroutine + `select` with a 3-second timeout. Comment from their code: *"Timeouts protect against Secret Service / kwalletd hangs on Linux."* Linux D-Bus / `gnome-keyring` / `kwalletd` can hang indefinitely on misconfigured systems; without the timeout, every CLI invocation could stall. This is the kind of detail that's invisible until production.
+- **Be honest about which storage was used.** Mercury's `SaveToken` returns `(insecureFallback bool, err)`, and the human-mode login output prints `Storage: plaintext file — system keyring unavailable` with the file path when fallback was used. Users in regulated environments need to know whether their token landed in the keychain or in a `0600` file; agents may want to record this in their telemetry.
+
+Why we're not shipping keyring in v1: our primary consumer (coding agents) often runs in containers, CI runners, WSL, or headless Linux without an active keyring service. Plaintext fallback would be the de-facto path for most invocations, so the keyring path adds dependency surface (`zalando/go-keyring`), platform-specific build complications (`libsecret-dev` on Debian, etc.), and three new failure modes for marginal real-world benefit. We add it when an enterprise customer asks. The architectural intent above means that's a contained change.
 
 ## `auth` subcommands
 
@@ -282,7 +319,7 @@ This feature adds **one new exit code** and **seven new CLI-emitted error codes*
 
 | Exit | Name | Meaning |
 |---|---|---|
-| **7** | **config** | Local config file unreadable, malformed, or unwriteable. Inspect or remove `~/.config/ollygarden/config.yaml`. Distinct from auth (3, "your token is bad") and usage (2, "your invocation is bad"). |
+| **7** | **config** | Local config file unreadable, malformed, or unwriteable. Inspect or remove the file at `os.UserConfigDir()/ollygarden/config.yaml` (path printed in the error message). Distinct from auth (3, "your token is bad") and usage (2, "your invocation is bad"). |
 
 CLI.md §5 must be updated with this row.
 
@@ -319,9 +356,12 @@ The current `cmd/root.go:48` `AuthError` is a placeholder. It is replaced by the
 
 **`internal/config/`:**
 
-- `Load` round-trips: write a YAML file with `t.TempDir()`, load it, assert struct equality. Cover empty file, missing file, corrupted YAML (assert `CONFIG_UNREADABLE` typed error), unknown fields.
+- `Load` round-trips: write a YAML file with `t.TempDir()`, load it, assert struct equality. Cover empty file, missing file, corrupted YAML (assert `CONFIG_UNREADABLE` typed error), unknown fields, `version` missing (treat as 1), `version > 1` (`CONFIG_UNREADABLE`).
 - `Write` atomicity: stub `os.Rename` to fail mid-write — assert original file intact, no `.tmp` left behind. Assert mode `0600` on file, `0700` on parent dir. Skip permission assertions on Windows.
+- `Write` with empty contexts deletes the file (Mercury behavior).
 - `Path` resolution: `OLLYGARDEN_CONFIG` set, unset, `$HOME` unset.
+
+**Test seam:** package-level `var pathFunc = defaultPath` lifted from Mercury's `internal/auth/credentials.go`. Tests swap it to redirect writes into `t.TempDir()` instead of touching the real `os.UserConfigDir()/ollygarden/`. Cleaner than env-var manipulation in tests.
 
 **`internal/auth/`:**
 
