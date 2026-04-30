@@ -117,6 +117,21 @@ func TestResolve_PrecedenceTable(t *testing.T) {
 			in:        ResolveInputs{Config: cfg, FlagContext: "ghost"},
 			expectErr: true,
 		},
+		{
+			name: "context with empty APIURL falls back to default",
+			in: ResolveInputs{Config: cfgWith("prod", map[string]*config.Context{
+				"prod": {APIKey: "og_sk_prod00_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", APIURL: ""},
+			})},
+			key:     "og_sk_prod00_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			url:     DefaultAPIURL,
+			source:  SourceContext,
+			ctxName: "prod",
+		},
+		{
+			name:      "env-context names unknown context",
+			in:        ResolveInputs{Config: cfg, EnvContext: "ghost"},
+			expectErr: true,
+		},
 	}
 
 	for _, tc := range cases {
