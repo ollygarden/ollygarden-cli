@@ -142,17 +142,19 @@ Three input modes for the token, picked in this order:
 Other flags:
 
 - `--api-url URL` (default `https://api.ollygarden.cloud`).
-- `--context NAME` — overrides auto-derived name. On collision with an existing context, overwrites without prompting (CI-friendly). When `--context` is *not* set and the auto-derived name collides, append `-2`, `-3`, …
+- `--context NAME` — overrides auto-derived name. Collisions with an existing context always overwrite (CI-friendly; this is the only way the user gets to choose the name).
 - `--no-activate` — add the context but do not change `current-context`. For agent setup scripts that pre-populate multiple contexts.
 
 Auto-context-naming rule: strip leading `api.` from the URL host, replace remaining `.` with `-`. `api.ollygarden.cloud` → `ollygarden-cloud`. `api.internal.ollygarden.cloud` → `internal-ollygarden-cloud`.
 
-Behavior:
+Collision rule when `--context` is **not** set: if a context with the auto-derived name already exists, **overwrite it**. Re-logging-in to the same target (token rotation) is the common case; appending `-2`/`-3` would silently spawn dead contexts. Two genuinely different URLs that derive the same name is vanishingly rare; users in that situation must pass `--context NAME` explicitly.
 
-1. Shape-check token: regex `^og_sk_[a-z0-9]{6}_[a-f0-9]{32}$`. Fail fast (exit 2, `INVALID_TOKEN_FORMAT`) before any network call.
+Behavior, in strict order:
+
+1. Shape-check token: regex `^og_sk_[A-Za-z0-9]{6}_[a-f0-9]{32}$`. Fail fast (exit 2, `INVALID_TOKEN_FORMAT`) before any network call.
 2. `GET /api/v1/organization` with the token. 200 → continue. 401 → exit 3, `TOKEN_REJECTED`. Other → existing error map.
-3. Atomic write to config file.
-4. Print result.
+3. Atomic write to config file. **If the write fails, print the write error and exit 7 (`CONFIG_WRITE_FAILED`) — do not print success.** The user may have a valid token that simply couldn't be persisted; they can retry or fix the underlying file-system issue.
+4. Only after successful write, print the success line / JSON result.
 
 Output (human):
 
@@ -168,10 +170,18 @@ Output (JSON, for agents):
 
 ### `ollygarden auth logout`
 
-- Default (no args): removes `current-context` from the file and unsets the pointer. Reversible by re-running `auth login`.
-- `--context NAME`: removes the named context.
-- `--all`: removes every context. **Requires** `--confirm` in non-TTY (per CLI_GUIDELINES.md §5); prompts on TTY. Default-only single-context removal does not need confirmation; only `--all` does.
+- Default (no args): removes the current context and unsets the `current-context` pointer. Reversible by re-running `auth login`.
+- `--context NAME`: removes the named context. If it was the current context, also unsets `current-context`.
+- `--all`: removes every context. **Requires** `--confirm` in non-TTY (per CLI_GUIDELINES.md §5); prompts on TTY. Default and `--context` removal do not need confirmation; only `--all` does.
+- After removal, when other contexts remain and `current-context` is now unset, the human-mode output prints a hint listing them and how to activate one. JSON mode just returns the structured result without prose.
 - Exit 0 on success. Exit 4 (`CONTEXT_NOT_FOUND`) if `--context NAME` doesn't exist.
+
+Example human output after a default logout when other contexts remain:
+
+```
+✓ Logged out of "prod".
+No current context set. Available: internal, dev. Activate with `ollygarden auth use-context NAME`.
+```
 
 ### `ollygarden auth status`
 
@@ -213,7 +223,7 @@ Sets `current-context: <name>`. Exit 4 (`CONTEXT_NOT_FOUND`) if name doesn't exi
 
 ### `ollygarden auth list-contexts`
 
-Table (human) or JSON. Columns: `CURRENT` (marker), `NAME`, `API URL`. **No keys shown** — this is a directory, not a credential dump. Use `auth status` to see the active key.
+Table (human) or JSON. Columns: `CURRENT` (marker `*` for the active context, blank otherwise), `NAME`, `API URL`. **No keys shown** — this is a directory, not a credential dump. Use `auth status` to see the active key.
 
 JSON envelope: `{data: [...], meta: {}}` to stay consistent with the rest of the CLI.
 
@@ -367,10 +377,10 @@ Skipped by default in `go test ./...`; run via `go test -tags=integration ./...`
 - §2 (Global Flags): add `--context` global flag and `OLLYGARDEN_CONTEXT` env var. Note that `OLLYGARDEN_API_KEY` env var still wins.
 - §3: add new subsections for each `auth` subcommand (flags, behavior, output examples, exit codes).
 - §5 (Error Handling): add exit code 7 (config) row. Add a "CLI-emitted error codes" subsection enumerating the eight new codes.
-- New §X (Credential Storage): describe the file path, mode `0600`, atomic-write semantics, `OLLYGARDEN_CONFIG` override, and the precedence tables for resolution.
+- **New §6 (Credential Storage)**, with subsequent sections renumbered: describe the file path, mode `0600`, atomic-write semantics, `OLLYGARDEN_CONFIG` override, and the precedence tables for resolution.
 
 ### `specs/CLI_GUIDELINES.md`
 
 - §4 (Error Handling Rules): one-line pointer to the new "CLI-emitted error codes" section in CLI.md, noting these apply to errors emitted before any HTTP call.
 - §5 (Destructive Operation Safety): note that `auth logout --all` follows the destructive-op pattern; default `auth logout` does not.
-- New §X (Auth Commands): brief notes on the `auth` subgroup convention and the agent-facing requirements (non-interactive paths, structured output) for any future subcommand under it.
+- **New §8 (Auth Commands)**: brief notes on the `auth` subgroup convention and the agent-facing requirements (non-interactive paths, structured output) for any future subcommand under it. Currently §7 is "API Types"; this becomes §8.
