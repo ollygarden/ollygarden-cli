@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/ollygarden/ollygarden-cli/internal/auth"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,10 +43,12 @@ func TestVersionFlag(t *testing.T) {
 	assert.Equal(t, "1.2.3", rootCmd.Version)
 }
 
-func TestMissingAPIKeyReturnsAuthError(t *testing.T) {
+func TestMissingAPIKey_ReturnsTypedNoCredentialsError(t *testing.T) {
 	t.Setenv("OLLYGARDEN_API_KEY", "")
+	t.Setenv("OLLYGARDEN_CONTEXT", "")
+	// Point config to an empty location to suppress real ~/.config reads.
+	t.Setenv("OLLYGARDEN_CONFIG", t.TempDir()+"/config.yaml")
 
-	// Register a temporary leaf command to trigger PersistentPreRunE
 	testCmd := &cobra.Command{
 		Use:  "auth-test-cmd",
 		RunE: func(cmd *cobra.Command, args []string) error { return nil },
@@ -54,12 +58,15 @@ func TestMissingAPIKeyReturnsAuthError(t *testing.T) {
 
 	_, _, err := executeCommand("auth-test-cmd")
 	require.Error(t, err)
-	_, ok := err.(*AuthError)
-	assert.True(t, ok, "expected AuthError, got %T: %v", err, err)
+
+	var ae *auth.Error
+	require.True(t, errors.As(err, &ae), "expected *auth.Error, got %T: %v", err, err)
+	assert.Equal(t, "NO_CREDENTIALS", ae.Code)
 }
 
-func TestAPIKeySetNoError(t *testing.T) {
-	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_1234567890abcdef1234567890abcdef")
+func TestEnvAPIKey_StillWorks(t *testing.T) {
+	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_envkey_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	t.Setenv("OLLYGARDEN_CONFIG", t.TempDir()+"/config.yaml")
 
 	testCmd := &cobra.Command{
 		Use:  "auth-ok-cmd",
@@ -69,7 +76,7 @@ func TestAPIKeySetNoError(t *testing.T) {
 	defer rootCmd.RemoveCommand(testCmd)
 
 	_, _, err := executeCommand("auth-ok-cmd")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestAPIURLDefault(t *testing.T) {
@@ -81,11 +88,6 @@ func TestAPIURLEnvOverride(t *testing.T) {
 	flag := rootCmd.PersistentFlags().Lookup("api-url")
 	require.NotNil(t, flag)
 	assert.Equal(t, "string", flag.Value.Type())
-}
-
-func TestAuthErrorMessage(t *testing.T) {
-	err := &AuthError{}
-	assert.Equal(t, "Error: OLLYGARDEN_API_KEY not set. Export it: export OLLYGARDEN_API_KEY=og_sk_...", err.Error())
 }
 
 func TestServicesHelp(t *testing.T) {
@@ -117,6 +119,7 @@ func TestQuietShortFlag(t *testing.T) {
 
 func TestAPIURLMissingSchemeReturnsError(t *testing.T) {
 	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_1234567890abcdef1234567890abcdef")
+	t.Setenv("OLLYGARDEN_CONFIG", t.TempDir()+"/config.yaml")
 
 	testCmd := &cobra.Command{
 		Use:  "scheme-test-cmd",
