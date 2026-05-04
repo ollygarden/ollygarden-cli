@@ -104,7 +104,7 @@ func TestWebhooksDeliveriesHelp(t *testing.T) {
 
 func TestGlobalFlags(t *testing.T) {
 	// Verify all global flags are registered
-	flags := []string{"api-url", "json", "quiet"}
+	flags := []string{"api-url", "context", "json", "quiet"}
 	for _, name := range flags {
 		flag := rootCmd.PersistentFlags().Lookup(name)
 		assert.NotNil(t, flag, "flag --%s should exist", name)
