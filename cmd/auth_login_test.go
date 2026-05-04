@@ -39,6 +39,7 @@ func setupAuthLoginEnv(t *testing.T) *httptest.Server {
 		authLoginNoActivate = false
 		jsonMode = false
 		quiet = false
+		contextName = "" // prevents --context value leaking into other tests
 	})
 	return srv
 }
@@ -115,6 +116,7 @@ func TestAuthLogin_TokenRejected(t *testing.T) {
 	t.Cleanup(func() {
 		authLoginTokenFile = ""
 		authLoginNoActivate = false
+		contextName = "" // prevents --context value leaking into other tests
 	})
 
 	tokenPath := filepath.Join(t.TempDir(), "token")

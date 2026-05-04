@@ -2293,6 +2293,7 @@ func setupAuthLoginEnv(t *testing.T) *httptest.Server {
 		authLoginNoActivate = false
 		jsonMode = false
 		quiet = false
+		contextName = ""   // prevents --context value leaking into other tests
 	})
 	return srv
 }
