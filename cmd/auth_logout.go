@@ -53,6 +53,8 @@ func runAuthLogout(cmd *cobra.Command, _ []string) error {
 		return auth.ErrConfigUnreadable("", err)
 	}
 
+	var removedCtx string
+
 	switch {
 	case authLogoutAll:
 		if !authLogoutConfirm && !isTerminal(os.Stdin) {
@@ -82,10 +84,9 @@ func runAuthLogout(cmd *cobra.Command, _ []string) error {
 		if cfg.CurrentContext == "" {
 			return auth.ErrNoCredentials()
 		}
-		removed := cfg.CurrentContext
-		delete(cfg.Contexts, removed)
+		removedCtx = cfg.CurrentContext
+		delete(cfg.Contexts, removedCtx)
 		cfg.CurrentContext = ""
-		_ = removed
 	}
 
 	if err := config.Write(cfg); err != nil {
@@ -120,7 +121,11 @@ func runAuthLogout(cmd *cobra.Command, _ []string) error {
 	case authLogoutContext != "":
 		fmt.Fprintf(cmd.OutOrStdout(), "✓ Removed context %q.\n", authLogoutContext)
 	default:
-		fmt.Fprintln(cmd.OutOrStdout(), "✓ Logged out.")
+		if removedCtx != "" {
+			fmt.Fprintf(cmd.OutOrStdout(), "✓ Logged out of %q.\n", removedCtx)
+		} else {
+			fmt.Fprintln(cmd.OutOrStdout(), "✓ Logged out.")
+		}
 	}
 
 	if !authLogoutAll && len(cfg.Contexts) > 0 && cfg.CurrentContext == "" {

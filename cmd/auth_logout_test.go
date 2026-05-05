@@ -76,3 +76,10 @@ func TestAuthLogout_AllWithConfirm(t *testing.T) {
 	assert.Empty(t, cfg.Contexts, "all contexts removed")
 	assert.Empty(t, cfg.CurrentContext)
 }
+
+func TestAuthLogout_DefaultMessageNamesContext(t *testing.T) {
+	setupTwoContexts(t)
+	out, _, err := executeCommand("auth", "logout")
+	require.NoError(t, err)
+	assert.Contains(t, out, `Logged out of "prod"`)
+}

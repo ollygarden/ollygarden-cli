@@ -133,6 +133,20 @@ func TestAPIURLMissingSchemeReturnsError(t *testing.T) {
 	assert.Contains(t, err.Error(), "--api-url must include scheme")
 }
 
+func TestAPIURLMissingScheme_OnAuthSubcommand(t *testing.T) {
+	t.Setenv("OLLYGARDEN_CONFIG", t.TempDir()+"/config.yaml")
+	t.Setenv("OLLYGARDEN_API_KEY", "")
+	t.Setenv("OLLYGARDEN_CONTEXT", "")
+	t.Cleanup(func() {
+		// Restore the persistent flag's default after this test mutates it.
+		apiURL = "https://api.ollygarden.cloud"
+	})
+
+	_, _, err := executeCommand("auth", "status", "--no-probe", "--api-url", "no-scheme.example.com")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "must include scheme")
+}
+
 func TestNewClientUsesFlags(t *testing.T) {
 	t.Setenv("OLLYGARDEN_API_KEY", "test-key")
 	c := NewClient()

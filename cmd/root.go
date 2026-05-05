@@ -34,12 +34,17 @@ var rootCmd = &cobra.Command{
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if skipAuthResolution(cmd) {
-			return nil
-		}
-
+		// URL scheme validation runs for every command, including the auth
+		// subtree — it's a pure flag check that doesn't need creds. Without
+		// this, `ollygarden auth login --api-url api.ollygarden.cloud` would
+		// skip the validation and fail later at the HTTP layer with an
+		// unhelpful "unsupported protocol scheme" error.
 		if apiURL != "" && !strings.HasPrefix(apiURL, "http://") && !strings.HasPrefix(apiURL, "https://") {
 			return fmt.Errorf("Error: --api-url must include scheme (e.g., https://api.ollygarden.cloud)")
+		}
+
+		if skipAuthResolution(cmd) {
+			return nil
 		}
 
 		cfg, err := config.Load()
