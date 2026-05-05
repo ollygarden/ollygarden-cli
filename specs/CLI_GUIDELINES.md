@@ -134,6 +134,10 @@ When the API adds a new error code:
 - JSON mode: full error envelope on stderr
 - Always include the API's `trace_id` in error output for debugging
 
+### CLI-emitted error codes
+
+For errors emitted before any HTTP call (validation, config I/O, missing context), see the "CLI-emitted error codes" table in `CLI.md` §5. Reuse those codes when adding similar pre-HTTP failures.
+
 ## 5. Destructive Operation Safety
 
 Any command that **deletes** or **irreversibly modifies** data must follow these rules:
@@ -156,6 +160,10 @@ Any command that **deletes** or **irreversibly modifies** data must follow these
 - `DELETE` methods
 - Any `PUT`/`POST` that is irreversible (evaluate case-by-case)
 - `create` and `update` are NOT destructive (they can be undone by another update/delete)
+
+### Auth-specific note
+
+`auth logout --all` follows this destructive-op pattern (`--confirm` required in non-TTY, prompt on TTY). Default `auth logout` and `auth logout --context NAME` do **not** require confirmation: removing a single locally-stored credential is reversible by re-running `auth login`.
 
 ## 6. Checklist: Adding a New Subcommand
 
@@ -181,3 +189,12 @@ When adding a new command:
 3. `--json` mode passes the raw API envelope through unchanged (no struct needed)
 
 **Future improvement**: Generate types from the OpenAPI spec via [`oapi-codegen`](https://github.com/oapi-codegen/oapi-codegen) into `internal/api/types.gen.go`.
+
+## 8. Auth Commands
+
+The `auth` subgroup houses commands that manage credentials on disk. When adding a new auth subcommand, follow these rules in addition to the rest of the guidelines:
+
+- **Non-interactive paths required.** Coding agents are the primary consumer. Every command must work without a TTY: provide a `--token-file` / stdin pipe / structured-flag alternative to any prompt.
+- **`--json` is mandatory.** Auth state is machine-introspected. The JSON envelope (`{data, meta}`) must include enough information for an agent to act on the result without parsing prose.
+- **Never print raw secrets.** Use `internal/auth.MaskKey` for any human or JSON output that includes a key. The `auth list-contexts` command intentionally omits keys entirely.
+- **Skip credential resolution.** Auth commands handle their own credential reads; `cmd/root.go`'s `PersistentPreRunE` walks up the command tree and skips resolution if any ancestor is the `auth` group. New auth commands inherit this automatically.
