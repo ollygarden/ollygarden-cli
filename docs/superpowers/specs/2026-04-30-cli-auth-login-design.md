@@ -55,7 +55,7 @@ The split exists so that any future caller of the file format (a debug tool, an 
 
 ## Architecture
 
-```
+```text
 ollygarden-cli/
 ├── cmd/
 │   ├── root.go                 # MODIFIED — credential resolution, error msg
@@ -195,7 +195,7 @@ Behavior, in strict order:
 
 Output (human):
 
-```
+```text
 ✓ Logged in to "Acme Corp" as context "prod" (https://api.ollygarden.cloud).
 ```
 
@@ -215,7 +215,7 @@ Output (JSON, for agents):
 
 Example human output after a default logout when other contexts remain:
 
-```
+```text
 ✓ Logged out of "prod".
 No current context set. Available: internal, dev. Activate with `ollygarden auth use-context NAME`.
 ```
@@ -233,7 +233,7 @@ Prints the active credential's source, URL, and masked key.
 
 Output (human):
 
-```
+```text
 Source:        env (OLLYGARDEN_API_KEY)
 API URL:       https://api.ollygarden.cloud
 Key:           og_sk_abc123_••••
@@ -242,7 +242,7 @@ Organization:  Acme Corp
 
 When env var wins but a context exists, output also notes the saved context that *would have* won:
 
-```
+```text
 Source:        env (OLLYGARDEN_API_KEY) — overrides saved context "prod"
 ```
 
@@ -293,7 +293,7 @@ What `PersistentPreRunE` does for every non-`auth` command. Two things to resolv
 
 Per-invocation override. Does not change `current-context` on disk. Pairs with agent workflows where one task touches two organizations:
 
-```
+```bash
 ollygarden --context internal services list
 ollygarden --context prod services list
 ```

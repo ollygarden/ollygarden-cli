@@ -18,8 +18,10 @@ func setupServicesVersionsServer(t *testing.T, handler http.HandlerFunc) *httpte
 	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_key")
 	oldURL := apiURL
 	oldLimit := servicesVersionsLimit
+	var oldAPIURLChanged bool
 	apiURL = srv.URL
 	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		oldAPIURLChanged = f.Changed
 		f.Changed = true
 	}
 	t.Cleanup(func() {
@@ -28,7 +30,7 @@ func setupServicesVersionsServer(t *testing.T, handler http.HandlerFunc) *httpte
 		quiet = false
 		servicesVersionsLimit = oldLimit
 		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-			f.Changed = false
+			f.Changed = oldAPIURLChanged
 		}
 	})
 	return srv

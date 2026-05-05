@@ -13,7 +13,10 @@ func MaskKey(s string) string {
 		return s
 	}
 	parts := strings.SplitN(s, "_", 4)
-	if len(parts) < 4 {
+	if len(parts) != 4 {
+		return s
+	}
+	if parts[0] != "og" || parts[1] != "sk" || parts[2] == "" || parts[3] == "" {
 		return s
 	}
 	if parts[3] == "••••" {
