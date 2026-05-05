@@ -20,12 +20,18 @@ func setupWebhooksDeliveriesListServer(t *testing.T, handler http.HandlerFunc) *
 	oldLimit := webhooksDeliveriesListLimit
 	oldOffset := webhooksDeliveriesListOffset
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		f.Changed = true
+	}
 	t.Cleanup(func() {
 		apiURL = oldURL
 		jsonMode = false
 		quiet = false
 		webhooksDeliveriesListLimit = oldLimit
 		webhooksDeliveriesListOffset = oldOffset
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
 	})
 	return srv
 }

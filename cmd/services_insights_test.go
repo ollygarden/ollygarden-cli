@@ -21,6 +21,9 @@ func setupServicesInsightsServer(t *testing.T, handler http.HandlerFunc) *httpte
 	oldLimit := servicesInsightsLimit
 	oldOffset := servicesInsightsOffset
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		f.Changed = true
+	}
 	t.Cleanup(func() {
 		apiURL = oldURL
 		jsonMode = false
@@ -28,6 +31,9 @@ func setupServicesInsightsServer(t *testing.T, handler http.HandlerFunc) *httpte
 		servicesInsightsStatus = oldStatus
 		servicesInsightsLimit = oldLimit
 		servicesInsightsOffset = oldOffset
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
 	})
 	return srv
 }

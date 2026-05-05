@@ -518,7 +518,7 @@ Error: OLLYGARDEN_API_KEY not set. Export it: export OLLYGARDEN_API_KEY=og_sk_..
 
 ### CLI-emitted error codes
 
-These appear in JSON-mode error envelopes (`error.code`) for failures detected before any HTTP call.
+These appear in JSON-mode error envelopes (`error.code`) for failures the CLI surfaces directly. Most are detected before any HTTP call (e.g. `NO_CREDENTIALS`, `INVALID_TOKEN_FORMAT`); `TOKEN_REJECTED` is emitted after `/organization` returns 401.
 
 | Code | Exit | When |
 |---|---|---|

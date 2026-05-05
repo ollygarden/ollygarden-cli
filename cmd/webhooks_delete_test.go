@@ -31,8 +31,14 @@ func setupWebhooksDeleteServer(t *testing.T, handler http.HandlerFunc) *httptest
 		webhooksDeleteConfirm = false
 		stdinIsTerminal = oldIsTerminal
 		stdinReader = oldReader
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
 	})
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		f.Changed = true
+	}
 	return srv
 }
 

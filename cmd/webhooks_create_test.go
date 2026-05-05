@@ -30,8 +30,14 @@ func setupWebhooksCreateServer(t *testing.T, handler http.HandlerFunc) *httptest
 		webhooksCreateEnvironments = nil
 		webhooksCreateMinSeverity = "Low"
 		webhooksCreateEnabled = false
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
 	})
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		f.Changed = true
+	}
 	return srv
 }
 

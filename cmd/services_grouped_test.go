@@ -21,6 +21,9 @@ func setupServicesGroupedServer(t *testing.T, handler http.HandlerFunc) *httptes
 	oldOffset := servicesGroupedOffset
 	oldSort := servicesGroupedSort
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		f.Changed = true
+	}
 	t.Cleanup(func() {
 		apiURL = oldURL
 		jsonMode = false
@@ -28,6 +31,9 @@ func setupServicesGroupedServer(t *testing.T, handler http.HandlerFunc) *httptes
 		servicesGroupedLimit = oldLimit
 		servicesGroupedOffset = oldOffset
 		servicesGroupedSort = oldSort
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
 	})
 	return srv
 }

@@ -21,8 +21,14 @@ func setupInsightsSummaryServer(t *testing.T, handler http.HandlerFunc) *httptes
 		apiURL = oldURL
 		jsonMode = false
 		quiet = false
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
 	})
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		f.Changed = true
+	}
 	return srv
 }
 

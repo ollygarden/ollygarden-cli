@@ -18,10 +18,16 @@ func setupOrgServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
 	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_key")
 	oldURL := apiURL
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		f.Changed = true
+	}
 	t.Cleanup(func() {
 		apiURL = oldURL
 		jsonMode = false
 		quiet = false
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
 	})
 	return srv
 }

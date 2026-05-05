@@ -287,7 +287,7 @@ What `PersistentPreRunE` does for every non-`auth` command. Two things to resolv
 | `api-url` from selected context (same selection rules as the key) | flag unset, env unset, context selected |
 | `https://api.ollygarden.cloud` (built-in default) | nothing else set |
 
-**API URL and API key resolve independently.** A user can `--api-url=internal --context=prod` to send a prod key against the internal API for debugging. Cross-source is allowed, not flagged. This is documented in CLI.md.
+**API URL and API key resolve independently.** A user can `--api-url=https://api.internal.ollygarden.cloud --context=prod` to send a prod key against the internal API for debugging. Cross-source is allowed, not flagged. This is documented in CLI.md.
 
 ### `--context NAME` (new global flag)
 

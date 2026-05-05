@@ -34,8 +34,14 @@ func setupWebhooksUpdateServer(t *testing.T, handler http.HandlerFunc) *httptest
 		webhooksUpdateCmd.Flags().VisitAll(func(f *pflag.Flag) {
 			f.Changed = false
 		})
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
 	})
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		f.Changed = true
+	}
 	return srv
 }
 

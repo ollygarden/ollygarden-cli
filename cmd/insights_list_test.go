@@ -27,6 +27,9 @@ func setupInsightsListServer(t *testing.T, handler http.HandlerFunc) *httptest.S
 	oldDateTo := insightsListDateTo
 	oldSort := insightsListSort
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		f.Changed = true
+	}
 	t.Cleanup(func() {
 		apiURL = oldURL
 		jsonMode = false
@@ -40,6 +43,9 @@ func setupInsightsListServer(t *testing.T, handler http.HandlerFunc) *httptest.S
 		insightsListDateFrom = oldDateFrom
 		insightsListDateTo = oldDateTo
 		insightsListSort = oldSort
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
 	})
 	return srv
 }

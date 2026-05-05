@@ -23,6 +23,9 @@ func setupServicesSearchServer(t *testing.T, handler http.HandlerFunc) *httptest
 	oldEnv := servicesSearchEnvironment
 	oldNs := servicesSearchNamespace
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		f.Changed = true
+	}
 	t.Cleanup(func() {
 		apiURL = oldURL
 		jsonMode = false
@@ -32,6 +35,9 @@ func setupServicesSearchServer(t *testing.T, handler http.HandlerFunc) *httptest
 		servicesSearchOffset = oldOffset
 		servicesSearchEnvironment = oldEnv
 		servicesSearchNamespace = oldNs
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
 	})
 	return srv
 }

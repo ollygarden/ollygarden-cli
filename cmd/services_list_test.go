@@ -20,12 +20,18 @@ func setupServicesServer(t *testing.T, handler http.HandlerFunc) *httptest.Serve
 	oldLimit := servicesListLimit
 	oldOffset := servicesListOffset
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		f.Changed = true
+	}
 	t.Cleanup(func() {
 		apiURL = oldURL
 		jsonMode = false
 		quiet = false
 		servicesListLimit = oldLimit
 		servicesListOffset = oldOffset
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
 	})
 	return srv
 }

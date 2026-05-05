@@ -19,11 +19,17 @@ func setupAnalyticsServicesServer(t *testing.T, handler http.HandlerFunc) *httpt
 	oldURL := apiURL
 	oldLimit := analyticsServicesLimit
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		f.Changed = true
+	}
 	t.Cleanup(func() {
 		apiURL = oldURL
 		jsonMode = false
 		quiet = false
 		analyticsServicesLimit = oldLimit
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
 	})
 	return srv
 }
