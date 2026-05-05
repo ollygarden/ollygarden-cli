@@ -64,7 +64,7 @@ Auth: `Authorization: Bearer <key>` header. Key format: `og_sk_{6char}_{32hex}`.
 
 ### 3.1 `ollygarden auth login`
 
-```
+```bash
 ollygarden auth login [flags]
 ```
 
@@ -84,7 +84,7 @@ Token input precedence: `--token-file` > non-TTY stdin > TTY prompt. Token shape
 
 ### 3.2 `ollygarden auth logout`
 
-```
+```bash
 ollygarden auth logout [flags]
 ```
 
@@ -100,7 +100,7 @@ When the last context is removed, the config file is deleted entirely.
 
 ### 3.3 `ollygarden auth status`
 
-```
+```bash
 ollygarden auth status [flags]
 ```
 
@@ -120,7 +120,7 @@ Sets `current-context` to the named context. Exit `4` if the name doesn't exist.
 
 ### 3.5 `ollygarden auth list-contexts`
 
-```
+```bash
 ollygarden auth list-contexts
 ```
 

@@ -52,7 +52,7 @@ func runWebhooksUpdate(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if !anyChanged {
-		return fmt.Errorf("Error: at least one flag is required")
+		return fmt.Errorf("at least one flag is required")
 	}
 
 	// Build partial request body — only include changed fields
@@ -60,7 +60,7 @@ func runWebhooksUpdate(cmd *cobra.Command, args []string) error {
 
 	if cmd.Flags().Changed("name") {
 		if len(webhooksUpdateName) > 255 {
-			return fmt.Errorf("Error: --name must be at most 255 characters")
+			return fmt.Errorf("--name must be at most 255 characters")
 		}
 		body["name"] = webhooksUpdateName
 	}
@@ -87,7 +87,7 @@ func runWebhooksUpdate(cmd *cobra.Command, args []string) error {
 
 	if cmd.Flags().Changed("min-severity") {
 		if !validSeverities[webhooksUpdateMinSeverity] {
-			return fmt.Errorf("Error: --min-severity must be one of: Low, Normal, Important, Critical")
+			return fmt.Errorf("--min-severity must be one of: Low, Normal, Important, Critical")
 		}
 		body["min_severity"] = webhooksUpdateMinSeverity
 	}

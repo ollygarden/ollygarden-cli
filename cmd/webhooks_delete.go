@@ -42,7 +42,7 @@ func runWebhooksDelete(cmd *cobra.Command, args []string) error {
 
 	// Non-TTY without --confirm → exit 2
 	if !webhooksDeleteConfirm && !stdinIsTerminal() {
-		return fmt.Errorf("Error: --confirm required for non-interactive webhook deletion")
+		return fmt.Errorf("--confirm required for non-interactive webhook deletion")
 	}
 
 	// GET webhook to obtain name for confirmation prompt / success message

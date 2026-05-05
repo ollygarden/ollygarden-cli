@@ -47,7 +47,7 @@ func init() {
 
 func runAnalyticsServices(cmd *cobra.Command, args []string) error {
 	if analyticsServicesLimit < 1 || analyticsServicesLimit > 100 {
-		return fmt.Errorf("Error: --limit must be between 1 and 100")
+		return fmt.Errorf("--limit must be between 1 and 100")
 	}
 
 	c := NewClient()

@@ -123,7 +123,10 @@ func TestAuthLogin_TokenRejected(t *testing.T) {
 	t.Cleanup(func() {
 		authLoginTokenFile = ""
 		authLoginNoActivate = false
-		contextName = "" // prevents --context value leaking into other tests
+		jsonMode = false
+		quiet = false
+		contextName = ""                        // prevents --context value leaking into other tests
+		apiURL = "https://api.ollygarden.cloud" // restore default
 	})
 
 	tokenPath := filepath.Join(t.TempDir(), "token")

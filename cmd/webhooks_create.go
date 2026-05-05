@@ -64,10 +64,10 @@ func runWebhooksCreate(cmd *cobra.Command, args []string) error {
 	f := output.New(cmd.OutOrStdout(), cmd.ErrOrStderr(), jsonMode, quiet)
 
 	if len(webhooksCreateName) > 255 {
-		return fmt.Errorf("Error: --name must be at most 255 characters")
+		return fmt.Errorf("--name must be at most 255 characters")
 	}
 	if !validSeverities[webhooksCreateMinSeverity] {
-		return fmt.Errorf("Error: --min-severity must be one of: Low, Normal, Important, Critical")
+		return fmt.Errorf("--min-severity must be one of: Low, Normal, Important, Critical")
 	}
 
 	eventTypes := webhooksCreateEventTypes

@@ -27,7 +27,7 @@ func init() {
 
 func runServicesVersions(cmd *cobra.Command, args []string) error {
 	if servicesVersionsLimit < 1 || servicesVersionsLimit > 50 {
-		return fmt.Errorf("Error: --limit must be between 1 and 50")
+		return fmt.Errorf("--limit must be between 1 and 50")
 	}
 
 	serviceID := args[0]

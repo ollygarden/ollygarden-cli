@@ -42,14 +42,14 @@ func runServicesSearch(cmd *cobra.Command, args []string) error {
 		q = args[0]
 	}
 	if q == "" {
-		return fmt.Errorf("Error: query is required (positional arg or --query flag)")
+		return fmt.Errorf("query is required (positional arg or --query flag)")
 	}
 
 	if servicesSearchLimit < 1 || servicesSearchLimit > 100 {
-		return fmt.Errorf("Error: --limit must be between 1 and 100")
+		return fmt.Errorf("--limit must be between 1 and 100")
 	}
 	if servicesSearchOffset < 0 {
-		return fmt.Errorf("Error: --offset must be >= 0")
+		return fmt.Errorf("--offset must be >= 0")
 	}
 
 	c := NewClient()

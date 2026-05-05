@@ -40,7 +40,7 @@ var rootCmd = &cobra.Command{
 		// skip the validation and fail later at the HTTP layer with an
 		// unhelpful "unsupported protocol scheme" error.
 		if apiURL != "" && !strings.HasPrefix(apiURL, "http://") && !strings.HasPrefix(apiURL, "https://") {
-			return fmt.Errorf("Error: --api-url must include scheme (e.g., https://api.ollygarden.cloud)")
+			return fmt.Errorf("--api-url must include scheme (e.g., https://api.ollygarden.cloud)")
 		}
 
 		if skipAuthResolution(cmd) {
@@ -133,7 +133,7 @@ func Execute() {
 		var apiErr *client.APIError
 		switch {
 		case errors.As(err, &authErr):
-			fmt.Fprintln(os.Stderr, "Error: "+authErr.Message)
+			fmt.Fprintln(os.Stderr, "Error: "+authErr.Error())
 			code = authErr.ExitCode
 		case errors.As(err, &apiErr):
 			fmt.Fprintln(os.Stderr, apiErr.Error())

@@ -313,7 +313,7 @@ Same effect as `--context`, lower precedence than the flag. Useful for shell ses
 
 ## Errors and exit codes
 
-This feature adds **one new exit code** and **seven new CLI-emitted error codes** (in the JSON envelope's `error.code`).
+This feature adds **one new exit code** and **eight new CLI-emitted error codes** (in the JSON envelope's `error.code`).
 
 ### New exit code
 

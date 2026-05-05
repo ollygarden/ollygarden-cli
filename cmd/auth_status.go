@@ -109,12 +109,13 @@ func runAuthStatus(cmd *cobra.Command, _ []string) error {
 	}
 
 	srcLine := source
-	if source == "env" {
+	switch source {
+	case "env":
 		srcLine = "env (OLLYGARDEN_API_KEY)"
 		if creds.ContextName != "" {
 			srcLine += fmt.Sprintf(" — overrides saved context %q", creds.ContextName)
 		}
-	} else if source == "context" {
+	case "context":
 		srcLine = fmt.Sprintf("context: %s", creds.ContextName)
 	}
 

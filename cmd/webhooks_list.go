@@ -39,10 +39,10 @@ func init() {
 
 func runWebhooksList(cmd *cobra.Command, args []string) error {
 	if webhooksListLimit < 1 || webhooksListLimit > 100 {
-		return fmt.Errorf("Error: --limit must be between 1 and 100")
+		return fmt.Errorf("--limit must be between 1 and 100")
 	}
 	if webhooksListOffset < 0 {
-		return fmt.Errorf("Error: --offset must be >= 0")
+		return fmt.Errorf("--offset must be >= 0")
 	}
 
 	c := NewClient()
