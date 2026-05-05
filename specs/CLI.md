@@ -12,6 +12,12 @@ ollygarden [global flags] <command> <subcommand> [args] [flags]
 
 ```
 ollygarden
+├── auth
+│   ├── login                           # save credentials for a context
+│   ├── logout                          # remove a context (or all)
+│   ├── status                          # show active credential, optional probe
+│   ├── use-context <name>              # set current-context
+│   └── list-contexts                   # list saved contexts (no keys shown)
 ├── organization                        # GET /organization
 ├── services
 │   ├── list                            # GET /services
@@ -42,8 +48,9 @@ ollygarden
 
 | Flag | Env Var | Type | Default | Description |
 |---|---|---|---|---|
-| *(none)* | `OLLYGARDEN_API_KEY` | string | **required** | API key (env-only, no flag — avoids process table/shell history leaks) |
+| *(none)* | `OLLYGARDEN_API_KEY` | string | required if no saved context | API key (env-only). Still wins over saved contexts when set. |
 | `--api-url` | `OLLYGARDEN_API_URL` | string | `https://api.ollygarden.cloud` | Base URL for the API |
+| `--context` | `OLLYGARDEN_CONTEXT` | string | *(none)* | Use a specific saved context for this invocation |
 | `--json` | | bool | `false` | Output raw JSON (full API response envelope) |
 | `-q, --quiet` | | bool | `false` | Suppress all non-essential output |
 | `-h, --help` | | bool | | Show help |
@@ -55,7 +62,73 @@ Auth: `Authorization: Bearer <key>` header. Key format: `og_sk_{6char}_{32hex}`.
 
 ## 3. Subcommand Reference
 
-### 3.1 `ollygarden organization`
+### 3.1 `ollygarden auth login`
+
+```
+ollygarden auth login [flags]
+```
+
+| Flag | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `--api-url`     | string | `https://api.ollygarden.cloud` | no | Inherited global flag. |
+| `--context`     | string | derived from API URL host | no | Name to assign this context. Overwrites if it exists. |
+| `--token-file`  | string | *(none)* | no | Read the token from this file path instead of stdin/TTY. |
+| `--no-activate` | bool   | false | no | Save the context without setting it as current-context. |
+
+Token input precedence: `--token-file` > non-TTY stdin > TTY prompt. Token shape `og_sk_[A-Za-z0-9]{6}_[a-f0-9]{32}` is enforced before any network call. The token is validated against `GET /api/v1/organization` before being persisted.
+
+| API | `GET /api/v1/organization` (validation only) |
+|---|---|
+
+---
+
+### 3.2 `ollygarden auth logout`
+
+```
+ollygarden auth logout [flags]
+```
+
+| Flag | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `--context`  | string | *(none)* | no | Name of the context to remove. |
+| `--all`      | bool   | false    | no | Remove every saved context. |
+| `--confirm`  | bool   | false    | no | Required for `--all` in non-interactive mode. |
+
+When the last context is removed, the config file is deleted entirely.
+
+---
+
+### 3.3 `ollygarden auth status`
+
+```
+ollygarden auth status [flags]
+```
+
+| Flag | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `--no-probe` | bool | false | no | Skip the `GET /organization` validation probe. |
+
+Exit codes: `0` if logged in (and probe succeeded if probing); `3` if no credential is configured or the probe got 401.
+
+---
+
+### 3.4 `ollygarden auth use-context <name>`
+
+Sets `current-context` to the named context. Exit `4` if the name doesn't exist.
+
+---
+
+### 3.5 `ollygarden auth list-contexts`
+
+```
+ollygarden auth list-contexts
+```
+
+No additional flags. Columns: `CURRENT` (`*` marker), `NAME`, `API URL`. **Keys are never shown** — use `auth status` to see the active key.
+
+---
+
+### 3.6 `ollygarden organization`
 
 ```
 ollygarden organization [flags]
@@ -68,7 +141,7 @@ No additional flags. Returns org tier, features, and instrumentation score.
 
 ---
 
-### 3.2 `ollygarden services list`
+### 3.7 `ollygarden services list`
 
 ```
 ollygarden services list [flags]
@@ -84,7 +157,7 @@ ollygarden services list [flags]
 
 ---
 
-### 3.3 `ollygarden services grouped`
+### 3.8 `ollygarden services grouped`
 
 ```
 ollygarden services grouped [flags]
@@ -101,7 +174,7 @@ ollygarden services grouped [flags]
 
 ---
 
-### 3.4 `ollygarden services search`
+### 3.9 `ollygarden services search`
 
 ```
 ollygarden services search [query] [flags]
@@ -125,7 +198,7 @@ Note: global `-q` is `--quiet`. No `-q` shorthand for `--query` to avoid ambigui
 
 ---
 
-### 3.5 `ollygarden services get`
+### 3.10 `ollygarden services get`
 
 ```
 ollygarden services get <service-id>
@@ -140,7 +213,7 @@ ollygarden services get <service-id>
 
 ---
 
-### 3.6 `ollygarden services versions`
+### 3.11 `ollygarden services versions`
 
 ```
 ollygarden services versions <service-id> [flags]
@@ -156,7 +229,7 @@ ollygarden services versions <service-id> [flags]
 
 ---
 
-### 3.7 `ollygarden services insights`
+### 3.12 `ollygarden services insights`
 
 ```
 ollygarden services insights <service-id> [flags]
@@ -174,7 +247,7 @@ ollygarden services insights <service-id> [flags]
 
 ---
 
-### 3.8 `ollygarden insights list`
+### 3.13 `ollygarden insights list`
 
 ```
 ollygarden insights list [flags]
@@ -197,7 +270,7 @@ ollygarden insights list [flags]
 
 ---
 
-### 3.9 `ollygarden insights get`
+### 3.14 `ollygarden insights get`
 
 ```
 ollygarden insights get <insight-id>
@@ -212,7 +285,7 @@ ollygarden insights get <insight-id>
 
 ---
 
-### 3.10 `ollygarden insights summary`
+### 3.15 `ollygarden insights summary`
 
 ```bash
 ollygarden insights summary <insight-id>
@@ -229,7 +302,7 @@ Returns an AI-generated summary for the insight. The summary includes contextual
 
 ---
 
-### 3.11 `ollygarden analytics services`
+### 3.16 `ollygarden analytics services`
 
 ```
 ollygarden analytics services [flags]
@@ -244,7 +317,7 @@ ollygarden analytics services [flags]
 
 ---
 
-### 3.12 `ollygarden webhooks list`
+### 3.17 `ollygarden webhooks list`
 
 ```
 ollygarden webhooks list [flags]
@@ -260,7 +333,7 @@ ollygarden webhooks list [flags]
 
 ---
 
-### 3.13 `ollygarden webhooks create`
+### 3.18 `ollygarden webhooks create`
 
 ```
 ollygarden webhooks create --name <name> --url <https-url> [flags]
@@ -280,7 +353,7 @@ ollygarden webhooks create --name <name> --url <https-url> [flags]
 
 ---
 
-### 3.14 `ollygarden webhooks get`
+### 3.19 `ollygarden webhooks get`
 
 ```
 ollygarden webhooks get <webhook-id>
@@ -295,7 +368,7 @@ ollygarden webhooks get <webhook-id>
 
 ---
 
-### 3.15 `ollygarden webhooks update`
+### 3.20 `ollygarden webhooks update`
 
 ```
 ollygarden webhooks update <webhook-id> [flags]
@@ -318,7 +391,7 @@ All flags optional (partial update). Only provided flags are sent in the request
 
 ---
 
-### 3.16 `ollygarden webhooks delete`
+### 3.21 `ollygarden webhooks delete`
 
 ```
 ollygarden webhooks delete <webhook-id> [--confirm]
@@ -329,14 +402,14 @@ ollygarden webhooks delete <webhook-id> [--confirm]
 | `webhook-id` | UUID | | **yes** | Webhook config ID |
 | `--confirm` | bool | `false` | no | Skip interactive confirmation |
 
-**Destructive operation** — see [Safety Rules](#6-safety-rules-for-destructive-operations).
+**Destructive operation** — see [Safety Rules](#7-safety-rules-for-destructive-operations).
 
 | API | `DELETE /api/v1/webhooks/{webhook_id}` |
 |---|---|
 
 ---
 
-### 3.17 `ollygarden webhooks test`
+### 3.22 `ollygarden webhooks test`
 
 ```
 ollygarden webhooks test <webhook-id>
@@ -351,7 +424,7 @@ ollygarden webhooks test <webhook-id>
 
 ---
 
-### 3.18 `ollygarden webhooks deliveries list`
+### 3.23 `ollygarden webhooks deliveries list`
 
 ```
 ollygarden webhooks deliveries list <webhook-id> [flags]
@@ -368,7 +441,7 @@ ollygarden webhooks deliveries list <webhook-id> [flags]
 
 ---
 
-### 3.19 `ollygarden webhooks deliveries get`
+### 3.24 `ollygarden webhooks deliveries get`
 
 ```
 ollygarden webhooks deliveries get <webhook-id> <delivery-id>
@@ -406,6 +479,7 @@ ollygarden webhooks deliveries get <webhook-id> <delivery-id>
 | `4` | Not found | Resource not found (404) |
 | `5` | Rate limited | `RATE_LIMIT_EXCEEDED` (60 req/min per key) |
 | `6` | Server error | API returned 5xx |
+| `7` | config | Local config file unreadable, malformed, or unwriteable |
 
 ### API Error Code Mapping
 
@@ -442,7 +516,50 @@ Missing API key (exit 3):
 Error: OLLYGARDEN_API_KEY not set. Export it: export OLLYGARDEN_API_KEY=og_sk_...
 ```
 
-## 6. Safety Rules for Destructive Operations
+### CLI-emitted error codes
+
+These appear in JSON-mode error envelopes (`error.code`) for failures detected before any HTTP call.
+
+| Code | Exit | When |
+|---|---|---|
+| `NO_CREDENTIALS`        | 3 | No env var, no flag, no current-context |
+| `INVALID_TOKEN_FORMAT`  | 2 | Token shape check failed |
+| `TOKEN_REJECTED`        | 3 | `/organization` returned 401 |
+| `CONTEXT_NOT_FOUND`     | 4 | A flag/env named a context that isn't in the file |
+| `CONFIG_UNREADABLE`     | 7 | Config file exists but can't be read or parsed |
+| `CONFIG_WRITE_FAILED`   | 7 | Atomic-rename or temp-file write failed |
+| `TOKEN_FILE_NOT_FOUND`  | 2 | `--token-file PATH` doesn't exist or isn't readable |
+| `CONFIRM_REQUIRED`      | 2 | `auth logout --all` in non-TTY without `--confirm` |
+
+## 6. Credential Storage
+
+Credentials are stored in a YAML file at `os.UserConfigDir()/ollygarden/config.yaml` with mode `0600`. Override the path with the `OLLYGARDEN_CONFIG` environment variable.
+
+### File schema
+
+```yaml
+version: 1
+current-context: prod
+contexts:
+  prod:
+    api-url: https://api.ollygarden.cloud
+    api-key: og_sk_xxxxxx_<32 hex>
+  internal:
+    api-url: https://api.internal.ollygarden.cloud
+    api-key: og_sk_xxxxxx_<32 hex>
+```
+
+Writes are atomic (`config.yaml.tmp` → `fsync` → `rename`). When the last context is removed via `auth logout`, the file is deleted entirely.
+
+### Resolution precedence
+
+**API key:** `OLLYGARDEN_API_KEY` env > `--context NAME` > `OLLYGARDEN_CONTEXT` > `current-context` > error (`NO_CREDENTIALS`).
+
+**API URL:** `--api-url` flag > `OLLYGARDEN_API_URL` env > selected context's `api-url` > built-in default `https://api.ollygarden.cloud`.
+
+API key and API URL resolve independently — `--api-url=internal --context=prod` is allowed.
+
+## 7. Safety Rules for Destructive Operations
 
 Only `webhooks delete` is destructive in this API surface.
 
@@ -453,7 +570,7 @@ Only `webhooks delete` is destructive in this API surface.
 | **Non-TTY without `--confirm`** | Exit code `2`: `Error: --confirm required for non-interactive webhook deletion` |
 | **`--quiet` interaction** | `--quiet` does not suppress the confirmation prompt. |
 
-## 7. Config / Env Rules
+## 8. Config / Env Rules
 
 ```
 Flag value  >  Environment variable  >  Built-in default
@@ -466,7 +583,7 @@ Flag value  >  Environment variable  >  Built-in default
 
 No config file for secrets (by design).
 
-## 8. Examples
+## 9. Examples
 
 ```bash
 # 1. Check org tier and instrumentation score
@@ -509,7 +626,7 @@ ollygarden webhooks deliveries list <id> --limit 5
 ollygarden services grouped --sort name-asc --json | jq '.data[].name'
 ```
 
-## 9. Implementation Notes
+## 10. Implementation Notes
 
 - **Language**: Go with Cobra
 - **API base path**: `/api/v1`
