@@ -48,11 +48,20 @@ func runAuthStatus(cmd *cobra.Command, _ []string) error {
 		return auth.ErrConfigUnreadable("", err)
 	}
 
+	// apiURL has a non-empty default, so we can't pass it unconditionally —
+	// that would force the default to win over a context's api-url. Only
+	// forward it when the user explicitly set --api-url.
+	flagAPIURL := ""
+	if cmd.Flags().Changed("api-url") {
+		flagAPIURL = apiURL
+	}
+
 	creds, err := auth.Resolve(auth.ResolveInputs{
 		Config:      cfg,
 		EnvAPIKey:   os.Getenv("OLLYGARDEN_API_KEY"),
 		EnvAPIURL:   os.Getenv("OLLYGARDEN_API_URL"),
 		EnvContext:  os.Getenv(config.ContextEnvVar),
+		FlagAPIURL:  flagAPIURL,
 		FlagContext: contextName,
 	})
 	if err != nil {

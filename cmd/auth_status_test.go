@@ -124,3 +124,38 @@ func TestAuthStatus_Probe_Success(t *testing.T) {
 	assert.True(t, env.Data.Probed)
 	assert.Equal(t, "Acme Corp", env.Data.Organization)
 }
+
+func TestAuthStatus_APIURLFlagOverridesContextURL(t *testing.T) {
+	t.Setenv(config.ConfigFileEnvVar, filepath.Join(t.TempDir(), "config.yaml"))
+	t.Setenv("OLLYGARDEN_API_KEY", "")
+	t.Setenv("OLLYGARDEN_CONTEXT", "")
+	t.Cleanup(func() {
+		authStatusNoProbe = false
+		jsonMode = false
+		contextName = ""
+		apiURL = "https://api.ollygarden.cloud" // restore default
+		// Cobra reuses the same rootCmd across executeCommand calls, so the
+		// persistent flag's Changed state persists between tests. Reset it to
+		// avoid leaking into subsequent tests that don't pass --api-url.
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
+	})
+
+	cfg := config.New()
+	cfg.CurrentContext = "prod"
+	cfg.Contexts["prod"] = &config.Context{Name: "prod", APIURL: "https://context-url.example.com", APIKey: "og_sk_abc123_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+	require.NoError(t, config.Write(cfg))
+
+	out, _, err := executeCommand("auth", "status", "--no-probe", "--json", "--api-url", "https://flag-override.example.com")
+	require.NoError(t, err)
+
+	var env struct {
+		Data struct {
+			APIURL string `json:"api_url"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(out), &env))
+	assert.Equal(t, "https://flag-override.example.com", env.Data.APIURL,
+		"--api-url must override the context's api-url for status output")
+}

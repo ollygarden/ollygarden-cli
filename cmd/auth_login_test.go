@@ -40,6 +40,13 @@ func setupAuthLoginEnv(t *testing.T) *httptest.Server {
 		jsonMode = false
 		quiet = false
 		contextName = "" // prevents --context value leaking into other tests
+		apiURL = "https://api.ollygarden.cloud"
+		// Cobra reuses the same rootCmd across executeCommand calls, so the
+		// persistent flag's Changed state persists between tests. Reset it so
+		// subsequent tests that don't pass --api-url aren't affected.
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
 	})
 	return srv
 }
