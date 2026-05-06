@@ -44,10 +44,10 @@ func init() {
 
 func runServicesList(cmd *cobra.Command, args []string) error {
 	if servicesListLimit < 1 || servicesListLimit > 100 {
-		return fmt.Errorf("Error: --limit must be between 1 and 100")
+		return fmt.Errorf("--limit must be between 1 and 100")
 	}
 	if servicesListOffset < 0 {
-		return fmt.Errorf("Error: --offset must be >= 0")
+		return fmt.Errorf("--offset must be >= 0")
 	}
 
 	c := NewClient()

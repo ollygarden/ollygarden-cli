@@ -40,6 +40,57 @@ ollygarden services list --api-url https://api.internal.ollygarden.cloud
 
 Flag takes precedence over env var, which takes precedence over the default.
 
+## Auth
+
+Save credentials to disk so you don't have to export `OLLYGARDEN_API_KEY` in every shell:
+
+```bash
+# Interactive (hidden prompt):
+ollygarden auth login
+
+# Or pipe a token:
+echo "$OLLYGARDEN_API_KEY" | ollygarden auth login
+
+# Or read from a file:
+ollygarden auth login --token-file /path/to/token
+```
+
+Get a token at <https://ollygarden.app/settings>.
+
+Multiple contexts (e.g. for different orgs or environments) coexist in one config:
+
+```bash
+ollygarden auth login --context prod
+ollygarden auth login --context internal --api-url https://api.internal.ollygarden.cloud
+ollygarden auth use-context prod
+ollygarden auth list-contexts
+```
+
+Per-invocation override without changing the active context:
+
+```bash
+ollygarden --context internal services list
+```
+
+Show what's active (probes the API by default):
+
+```bash
+ollygarden auth status            # validates the token via /organization
+ollygarden auth status --no-probe # offline check
+```
+
+Remove credentials:
+
+```bash
+ollygarden auth logout                       # remove current context
+ollygarden auth logout --context internal    # remove a specific context
+ollygarden auth logout --all --confirm       # remove everything
+```
+
+**Storage:** YAML at `os.UserConfigDir()/ollygarden/config.yaml` with mode `0600`. Override the path with `OLLYGARDEN_CONFIG`.
+
+**Precedence:** `OLLYGARDEN_API_KEY` env var (when set) always wins over saved contexts, so CI runs and ad-hoc invocations continue to work.
+
 ## Usage
 
 ```bash

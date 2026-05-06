@@ -51,13 +51,13 @@ func init() {
 
 func runServicesGrouped(cmd *cobra.Command, args []string) error {
 	if servicesGroupedLimit < 1 || servicesGroupedLimit > 100 {
-		return fmt.Errorf("Error: --limit must be between 1 and 100")
+		return fmt.Errorf("--limit must be between 1 and 100")
 	}
 	if servicesGroupedOffset < 0 {
-		return fmt.Errorf("Error: --offset must be >= 0")
+		return fmt.Errorf("--offset must be >= 0")
 	}
 	if !allowedSorts[servicesGroupedSort] {
-		return fmt.Errorf("Error: --sort must be one of: insights-first, name-asc, name-desc, created-asc, created-desc")
+		return fmt.Errorf("--sort must be one of: insights-first, name-asc, name-desc, created-asc, created-desc")
 	}
 
 	c := NewClient()

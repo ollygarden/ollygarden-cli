@@ -20,6 +20,10 @@ func setupWebhooksUpdateServer(t *testing.T, handler http.HandlerFunc) *httptest
 	t.Cleanup(srv.Close)
 	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_key")
 	oldURL := apiURL
+	var oldAPIURLChanged bool
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		oldAPIURLChanged = f.Changed
+	}
 	t.Cleanup(func() {
 		apiURL = oldURL
 		jsonMode = false
@@ -34,8 +38,14 @@ func setupWebhooksUpdateServer(t *testing.T, handler http.HandlerFunc) *httptest
 		webhooksUpdateCmd.Flags().VisitAll(func(f *pflag.Flag) {
 			f.Changed = false
 		})
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = oldAPIURLChanged
+		}
 	})
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		f.Changed = true
+	}
 	return srv
 }
 

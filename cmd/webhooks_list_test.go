@@ -19,13 +19,21 @@ func setupWebhooksListServer(t *testing.T, handler http.HandlerFunc) *httptest.S
 	oldURL := apiURL
 	oldLimit := webhooksListLimit
 	oldOffset := webhooksListOffset
+	var oldAPIURLChanged bool
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		oldAPIURLChanged = f.Changed
+		f.Changed = true
+	}
 	t.Cleanup(func() {
 		apiURL = oldURL
 		jsonMode = false
 		quiet = false
 		webhooksListLimit = oldLimit
 		webhooksListOffset = oldOffset
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = oldAPIURLChanged
+		}
 	})
 	return srv
 }

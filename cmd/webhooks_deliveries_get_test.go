@@ -17,11 +17,19 @@ func setupWebhooksDeliveriesGetServer(t *testing.T, handler http.HandlerFunc) *h
 	t.Cleanup(srv.Close)
 	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_key")
 	oldURL := apiURL
+	var oldAPIURLChanged bool
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		oldAPIURLChanged = f.Changed
+		f.Changed = true
+	}
 	t.Cleanup(func() {
 		apiURL = oldURL
 		jsonMode = false
 		quiet = false
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = oldAPIURLChanged
+		}
 	})
 	return srv
 }

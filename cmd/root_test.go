@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/ollygarden/ollygarden-cli/internal/auth"
+	"github.com/ollygarden/ollygarden-cli/internal/config"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,10 +44,12 @@ func TestVersionFlag(t *testing.T) {
 	assert.Equal(t, "1.2.3", rootCmd.Version)
 }
 
-func TestMissingAPIKeyReturnsAuthError(t *testing.T) {
+func TestMissingAPIKey_ReturnsTypedNoCredentialsError(t *testing.T) {
 	t.Setenv("OLLYGARDEN_API_KEY", "")
+	t.Setenv("OLLYGARDEN_CONTEXT", "")
+	// Point config to an empty location to suppress real ~/.config reads.
+	t.Setenv("OLLYGARDEN_CONFIG", t.TempDir()+"/config.yaml")
 
-	// Register a temporary leaf command to trigger PersistentPreRunE
 	testCmd := &cobra.Command{
 		Use:  "auth-test-cmd",
 		RunE: func(cmd *cobra.Command, args []string) error { return nil },
@@ -54,12 +59,15 @@ func TestMissingAPIKeyReturnsAuthError(t *testing.T) {
 
 	_, _, err := executeCommand("auth-test-cmd")
 	require.Error(t, err)
-	_, ok := err.(*AuthError)
-	assert.True(t, ok, "expected AuthError, got %T: %v", err, err)
+
+	var ae *auth.Error
+	require.True(t, errors.As(err, &ae), "expected *auth.Error, got %T: %v", err, err)
+	assert.Equal(t, "NO_CREDENTIALS", ae.Code)
 }
 
-func TestAPIKeySetNoError(t *testing.T) {
-	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_1234567890abcdef1234567890abcdef")
+func TestEnvAPIKey_StillWorks(t *testing.T) {
+	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_envkey_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	t.Setenv("OLLYGARDEN_CONFIG", t.TempDir()+"/config.yaml")
 
 	testCmd := &cobra.Command{
 		Use:  "auth-ok-cmd",
@@ -69,7 +77,7 @@ func TestAPIKeySetNoError(t *testing.T) {
 	defer rootCmd.RemoveCommand(testCmd)
 
 	_, _, err := executeCommand("auth-ok-cmd")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestAPIURLDefault(t *testing.T) {
@@ -81,11 +89,6 @@ func TestAPIURLEnvOverride(t *testing.T) {
 	flag := rootCmd.PersistentFlags().Lookup("api-url")
 	require.NotNil(t, flag)
 	assert.Equal(t, "string", flag.Value.Type())
-}
-
-func TestAuthErrorMessage(t *testing.T) {
-	err := &AuthError{}
-	assert.Equal(t, "Error: OLLYGARDEN_API_KEY not set. Export it: export OLLYGARDEN_API_KEY=og_sk_...", err.Error())
 }
 
 func TestServicesHelp(t *testing.T) {
@@ -102,7 +105,7 @@ func TestWebhooksDeliveriesHelp(t *testing.T) {
 
 func TestGlobalFlags(t *testing.T) {
 	// Verify all global flags are registered
-	flags := []string{"api-url", "json", "quiet"}
+	flags := []string{"api-url", "context", "json", "quiet"}
 	for _, name := range flags {
 		flag := rootCmd.PersistentFlags().Lookup(name)
 		assert.NotNil(t, flag, "flag --%s should exist", name)
@@ -117,6 +120,13 @@ func TestQuietShortFlag(t *testing.T) {
 
 func TestAPIURLMissingSchemeReturnsError(t *testing.T) {
 	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_1234567890abcdef1234567890abcdef")
+	t.Setenv("OLLYGARDEN_CONFIG", t.TempDir()+"/config.yaml")
+	t.Cleanup(func() {
+		apiURL = "https://api.ollygarden.cloud"
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
+	})
 
 	testCmd := &cobra.Command{
 		Use:  "scheme-test-cmd",
@@ -130,9 +140,68 @@ func TestAPIURLMissingSchemeReturnsError(t *testing.T) {
 	assert.Contains(t, err.Error(), "--api-url must include scheme")
 }
 
+func TestAPIURLMissingScheme_OnAuthSubcommand(t *testing.T) {
+	t.Setenv("OLLYGARDEN_CONFIG", t.TempDir()+"/config.yaml")
+	t.Setenv("OLLYGARDEN_API_KEY", "")
+	t.Setenv("OLLYGARDEN_CONTEXT", "")
+	t.Cleanup(func() {
+		// Restore the persistent flag's default and Changed state after this test mutates it.
+		apiURL = "https://api.ollygarden.cloud"
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
+	})
+
+	_, _, err := executeCommand("auth", "status", "--no-probe", "--api-url", "no-scheme.example.com")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "must include scheme")
+}
+
 func TestNewClientUsesFlags(t *testing.T) {
 	t.Setenv("OLLYGARDEN_API_KEY", "test-key")
 	c := NewClient()
 	assert.NotNil(t, c)
 	_ = fmt.Sprintf("%v", c) // ensure it's usable
+}
+
+func TestPersistentPreRunE_ContextURL_NotOverriddenByDefault(t *testing.T) {
+	// Verifies that the persistent --api-url flag's default value does not
+	// silently override a context's saved api-url. Without the
+	// cmd.Flags().Changed("api-url") gate, this test catches the regression.
+	cfgPath := t.TempDir() + "/config.yaml"
+	t.Setenv("OLLYGARDEN_CONFIG", cfgPath)
+	t.Setenv("OLLYGARDEN_API_KEY", "")
+	t.Setenv("OLLYGARDEN_CONTEXT", "")
+	t.Cleanup(func() {
+		contextName = ""
+		apiURL = "https://api.ollygarden.cloud"
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = false
+		}
+	})
+
+	// Seed a context with a non-default api-url.
+	cfg := config.New()
+	cfg.CurrentContext = "internal"
+	cfg.Contexts["internal"] = &config.Context{
+		Name:   "internal",
+		APIURL: "https://api.internal.example.com",
+		APIKey: "og_sk_intxxx_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	}
+	require.NoError(t, config.Write(cfg))
+
+	// Trigger PersistentPreRunE via a no-op test command. No --api-url flag passed.
+	testCmd := &cobra.Command{
+		Use:  "url-test-cmd",
+		RunE: func(cmd *cobra.Command, args []string) error { return nil },
+	}
+	rootCmd.AddCommand(testCmd)
+	defer rootCmd.RemoveCommand(testCmd)
+
+	_, _, err := executeCommand("url-test-cmd")
+	require.NoError(t, err)
+
+	// resolvedCreds.APIURL must come from the context, not the default flag value.
+	assert.Equal(t, "https://api.internal.example.com", resolvedCreds.APIURL,
+		"context's api-url should not be overridden by the persistent flag's default")
 }

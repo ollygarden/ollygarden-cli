@@ -8,4 +8,5 @@ const (
 	NotFound  = 4
 	RateLimit = 5
 	Server    = 6
+	Config    = 7
 )

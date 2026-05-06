@@ -24,6 +24,10 @@ func setupWebhooksDeleteServer(t *testing.T, handler http.HandlerFunc) *httptest
 	oldURL := apiURL
 	oldIsTerminal := stdinIsTerminal
 	oldReader := stdinReader
+	var oldAPIURLChanged bool
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		oldAPIURLChanged = f.Changed
+	}
 	t.Cleanup(func() {
 		apiURL = oldURL
 		jsonMode = false
@@ -31,8 +35,14 @@ func setupWebhooksDeleteServer(t *testing.T, handler http.HandlerFunc) *httptest
 		webhooksDeleteConfirm = false
 		stdinIsTerminal = oldIsTerminal
 		stdinReader = oldReader
+		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+			f.Changed = oldAPIURLChanged
+		}
 	})
 	apiURL = srv.URL
+	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
+		f.Changed = true
+	}
 	return srv
 }
 
