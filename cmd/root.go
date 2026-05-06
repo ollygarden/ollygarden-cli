@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -134,21 +135,31 @@ func NewClient() *client.Client {
 
 // Execute runs the root command and exits with the appropriate code.
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		code := exitcode.General
+	os.Exit(handleRootErr(rootCmd.Execute(), os.Stderr))
+}
 
-		var authErr *auth.Error
-		var apiErr *client.APIError
-		switch {
-		case errors.As(err, &authErr):
-			fmt.Fprintln(os.Stderr, "Error: "+authErr.Error())
-			code = authErr.ExitCode
-		case errors.As(err, &apiErr):
-			fmt.Fprintln(os.Stderr, apiErr.Error())
-			code = apiErr.ExitCode()
-		default:
-			fmt.Fprintln(os.Stderr, err)
-		}
-		os.Exit(code)
+// handleRootErr maps a command error to an exit code and writes any
+// message that hasn't already been emitted by the command itself.
+//
+// APIError messages are intentionally NOT printed here: the originating
+// command writes them via output.Formatter.PrintError, which is the only
+// path that respects --json mode. Printing again here would duplicate the
+// human-format line on stderr.
+func handleRootErr(err error, stderr io.Writer) int {
+	if err == nil {
+		return exitcode.Success
+	}
+
+	var authErr *auth.Error
+	var apiErr *client.APIError
+	switch {
+	case errors.As(err, &authErr):
+		fmt.Fprintln(stderr, "Error: "+authErr.Error())
+		return authErr.ExitCode
+	case errors.As(err, &apiErr):
+		return apiErr.ExitCode()
+	default:
+		fmt.Fprintln(stderr, err)
+		return exitcode.General
 	}
 }

@@ -4,10 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/ollygarden/ollygarden-cli/internal/auth"
+	"github.com/ollygarden/ollygarden-cli/internal/client"
 	"github.com/ollygarden/ollygarden-cli/internal/config"
+	"github.com/ollygarden/ollygarden-cli/internal/exitcode"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -204,4 +208,85 @@ func TestPersistentPreRunE_ContextURL_NotOverriddenByDefault(t *testing.T) {
 	// resolvedCreds.APIURL must come from the context, not the default flag value.
 	assert.Equal(t, "https://api.internal.example.com", resolvedCreds.APIURL,
 		"context's api-url should not be overridden by the persistent flag's default")
+}
+
+func TestHandleRootErr_APIErrorNotPrintedTwice(t *testing.T) {
+	// The originating command writes the formatted error via
+	// output.Formatter.PrintError; handleRootErr must not print it again.
+	// This regression test catches a re-introduction of the duplicate-print
+	// bug where both layers wrote the same line to stderr.
+	body := `{"error":{"code":"INVALID_API_KEY","message":"Invalid API key"},"meta":{"trace_id":"t1"}}`
+	setupOrgServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(body))
+	})
+	resetHelpFlag(t, organizationCmd)
+
+	_, stderr, runErr := executeCommand("organization")
+	require.Error(t, runErr)
+
+	// The command already wrote one "Invalid API key" line via PrintError.
+	// handleRootErr should add nothing more to stderr for an APIError.
+	stderrBuf := bytes.NewBufferString(stderr)
+	code := handleRootErr(runErr, stderrBuf)
+
+	assert.Equal(t, exitcode.Auth, code)
+	full := stderrBuf.String()
+	assert.Equal(t, 1, strings.Count(full, "Invalid API key"),
+		"APIError message must appear exactly once on stderr; got:\n%s", full)
+}
+
+// resetHelpFlag clears a sticky --help flag on the given command. Cobra
+// retains flag.Changed across rootCmd.Execute() invocations, so a prior
+// test that ran "<cmd> --help" makes subsequent runs of "<cmd>" silently
+// re-trigger help instead of executing RunE.
+func resetHelpFlag(t *testing.T, cmd *cobra.Command) {
+	t.Helper()
+	if f := cmd.Flags().Lookup("help"); f != nil {
+		f.Changed = false
+		_ = f.Value.Set("false")
+	}
+}
+
+func TestHandleRootErr_NilReturnsSuccess(t *testing.T) {
+	var buf bytes.Buffer
+	code := handleRootErr(nil, &buf)
+	assert.Equal(t, exitcode.Success, code)
+	assert.Empty(t, buf.String())
+}
+
+func TestHandleRootErr_AuthErrorPrintsOnce(t *testing.T) {
+	authErr := &auth.Error{Code: "no_credentials", Message: "no credential is configured", ExitCode: exitcode.Auth}
+	var buf bytes.Buffer
+	code := handleRootErr(authErr, &buf)
+	assert.Equal(t, exitcode.Auth, code)
+	assert.Equal(t, 1, strings.Count(buf.String(), authErr.Error()))
+	assert.True(t, strings.HasPrefix(buf.String(), "Error: "))
+}
+
+func TestHandleRootErr_GenericErrorPrintsOnce(t *testing.T) {
+	var buf bytes.Buffer
+	code := handleRootErr(errors.New("boom"), &buf)
+	assert.Equal(t, exitcode.General, code)
+	assert.Equal(t, "boom\n", buf.String())
+}
+
+func TestHandleRootErr_APIErrorReturnsMappedExitCode(t *testing.T) {
+	cases := []struct {
+		status int
+		want   int
+	}{
+		{http.StatusBadRequest, exitcode.Usage},
+		{http.StatusUnauthorized, exitcode.Auth},
+		{http.StatusNotFound, exitcode.NotFound},
+		{http.StatusTooManyRequests, exitcode.RateLimit},
+		{http.StatusInternalServerError, exitcode.Server},
+	}
+	for _, tc := range cases {
+		var buf bytes.Buffer
+		apiErr := &client.APIError{StatusCode: tc.status}
+		code := handleRootErr(apiErr, &buf)
+		assert.Equal(t, tc.want, code, "status %d", tc.status)
+		assert.Empty(t, buf.String(), "handleRootErr must not print APIError messages (status %d)", tc.status)
+	}
 }
