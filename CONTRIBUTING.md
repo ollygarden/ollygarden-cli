@@ -41,7 +41,7 @@ material agent involvement in the pull request description.
 4. Run:
 
    ```bash
-   gofmt -w <changed-go-files>
+   gofmt -w -- file1.go file2.go
    go mod tidy
    git diff --exit-code -- go.mod go.sum
    go build ./...

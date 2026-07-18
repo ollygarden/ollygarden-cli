@@ -17,7 +17,7 @@ insights, analytics, organization, authentication, and webhook workflows.
 - After a code change, run formatting and the validation commands below before finishing.
 
 ```bash
-gofmt -w <changed-go-files>
+gofmt -w -- file1.go file2.go
 go mod tidy
 git diff --exit-code -- go.mod go.sum
 go build ./...
@@ -115,3 +115,26 @@ curl -fsSL https://api.ollygarden.cloud/openapi.json -o /tmp/openapi.json
 Follow [CONTRIBUTING.md](CONTRIBUTING.md). Keep CLI surface changes synchronized
 with the specifications, describe user-visible compatibility effects, and list
 the exact validation performed.
+
+## Documentation and compatibility checks
+
+For repository-guidance or skill changes, run these checks from the repository
+root. Set `BASE_SHA` to the pull request base commit when checking an already
+committed branch diff.
+
+```bash
+test -f AGENTS.md
+test ! -L AGENTS.md
+test -L CLAUDE.md
+test -e CLAUDE.md
+test "$(readlink CLAUDE.md)" = AGENTS.md
+cmp -s AGENTS.md CLAUDE.md
+test -d .agents/skills
+test ! -L .agents/skills
+test -L .claude/skills
+test -e .claude/skills
+test "$(readlink .claude/skills)" = ../.agents/skills
+git diff --check
+test -z "${BASE_SHA:-}" || git diff --check "${BASE_SHA}...HEAD"
+perl -MFile::Basename=dirname -MFile::Spec -ne 'while (/\[[^]]+\]\(([^)#]+)(?:#[^)]+)?\)/g) { $target = $1; next if $target =~ m{^(?:https?://|mailto:)}; $path = File::Spec->catfile(dirname($ARGV), $target); die "$ARGV: missing $target\n" unless -e $path }' AGENTS.md README.md CONTRIBUTING.md
+```
