@@ -2,6 +2,8 @@
 
 CLI client for the OllyGarden REST API. Query services, insights, analytics, and manage webhooks from your terminal.
 
+This is the actively maintained public OllyGarden CLI. Repository-specific development and safety guidance lives in [AGENTS.md](AGENTS.md); contribution expectations are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Install
 
 **macOS / Linux**
@@ -130,3 +132,13 @@ ollygarden completion bash > /etc/bash_completion.d/ollygarden
 ollygarden completion zsh > "${fpath[1]}/_ollygarden"
 ollygarden completion fish > ~/.config/fish/completions/ollygarden.fish
 ```
+
+## Development
+
+Use the Go version declared in `go.mod`. Before submitting changes, follow the
+validation and CLI compatibility rules in [CONTRIBUTING.md](CONTRIBUTING.md) and
+keep command behavior synchronized with [specs/CLI.md](specs/CLI.md).
+
+## License
+
+[Apache License 2.0](LICENSE)
