@@ -1,6 +1,6 @@
 module github.com/ollygarden/ollygarden-cli
 
-go 1.25.0
+go 1.26.6
 
 require (
 	github.com/spf13/cobra v1.10.2
