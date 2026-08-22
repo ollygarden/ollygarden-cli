@@ -16,10 +16,14 @@ fail() {
 
 archive_count=0
 release_version=""
+seen_archives=""
 
 while read -r checksum archive; do
     [ -n "$checksum" ] || continue
     [ -f "$dist_dir/$archive" ] || fail "checksum manifest references missing archive: $archive"
+    printf '%s\n' "$seen_archives" | grep -Fxq "$archive" && fail "duplicate release archive: $archive"
+    seen_archives="${seen_archives}${archive}
+"
 
     if command -v sha256sum >/dev/null 2>&1; then
         actual_checksum="$(sha256sum "$dist_dir/$archive" | awk '{print $1}')"
@@ -52,9 +56,15 @@ while read -r checksum archive; do
 
     case "$archive" in
         *_darwin_*.tar.gz|*_linux_*.tar.gz)
-            grep -Fq "sha256 \"$checksum\"" "$cask" || fail "cask is missing checksum for $archive"
-            cask_archive="${archive#ollygarden_${release_version}_}"
-            grep -Fq "ollygarden_#{version}_$cask_archive" "$cask" || fail "cask is missing URL for $archive"
+            archive_prefix="ollygarden_${release_version}_"
+            cask_archive="${archive#"$archive_prefix"}"
+            awk -v checksum="$checksum" -v archive="$cask_archive" '
+                /^[[:space:]]+on_(intel|arm) do$/ { has_checksum = 0; has_url = 0 }
+                index($0, "sha256 \"" checksum "\"") { has_checksum = 1 }
+                index($0, "ollygarden_#{version}_" archive) { has_url = 1 }
+                has_checksum && has_url { found = 1 }
+                END { exit !found }
+            ' "$cask" || fail "cask URL and checksum do not match $archive"
             ;;
     esac
 
@@ -62,6 +72,19 @@ while read -r checksum archive; do
 done < "$checksums"
 
 [ "$archive_count" -eq 6 ] || fail "expected 6 release archives, found $archive_count"
+
+for suffix in \
+    darwin_amd64.tar.gz \
+    darwin_arm64.tar.gz \
+    linux_amd64.tar.gz \
+    linux_arm64.tar.gz \
+    windows_amd64.zip \
+    windows_arm64.zip
+do
+    expected_archive="ollygarden_${release_version}_$suffix"
+    printf '%s\n' "$seen_archives" | grep -Fxq "$expected_archive" || fail "missing release archive: $expected_archive"
+done
+
 grep -Fq "version \"$release_version\"" "$cask" || fail "cask version does not match release archives"
 grep -Fq 'homepage "https://github.com/ollygarden/ollygarden-cli"' "$cask" || fail "cask homepage is not canonical"
 grep -Fq 'verified: "github.com/ollygarden/ollygarden-cli/"' "$cask" || fail "cask download origin is not verified"
