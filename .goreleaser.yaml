@@ -44,6 +44,18 @@ checksum:
   name_template: checksums.txt
   algorithm: sha256
 
+homebrew_casks:
+  - name: ollygarden
+    homepage: https://github.com/ollygarden/ollygarden-cli
+    description: CLI client for the OllyGarden REST API
+    url:
+      verified: github.com/ollygarden/ollygarden-cli/
+    skip_upload: '{{ if index .Env "HOMEBREW_TAP_GITHUB_TOKEN" }}auto{{ else }}true{{ end }}'
+    repository:
+      owner: ollygarden
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
 
