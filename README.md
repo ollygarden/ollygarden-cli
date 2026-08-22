@@ -138,6 +138,7 @@ ollygarden completion fish > ~/.config/fish/completions/ollygarden.fish
 Use the Go version declared in `go.mod`. Before submitting changes, follow the
 validation and CLI compatibility rules in [CONTRIBUTING.md](CONTRIBUTING.md) and
 keep command behavior synchronized with [specs/CLI.md](specs/CLI.md).
+Maintainer release instructions are in [docs/RELEASING.md](docs/RELEASING.md).
 
 ## License
 
