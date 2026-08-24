@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"testing"
 )
 
@@ -12,14 +11,9 @@ const (
 )
 
 // setupRoseServer points the CLI at a stub API server and restores all
-// rose command flag globals after the test, mirroring the per-command
-// setup helpers used elsewhere in this package.
-func setupRoseServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
+// rose command flag globals after the test.
+func setupRoseServer(t *testing.T, handler http.HandlerFunc) {
 	t.Helper()
-	srv := httptest.NewServer(handler)
-	t.Cleanup(srv.Close)
-	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_key")
-	oldURL := apiURL
 	oldFindingsSeverity := roseFindingsListSeverity
 	oldFindingsCategory := roseFindingsListCategory
 	oldFindingsStatus := roseFindingsListStatus
@@ -31,16 +25,8 @@ func setupRoseServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
 	oldExecutionsStatus := roseExecutionsListStatus
 	oldExecutionsRepositoryID := roseExecutionsListRepositoryID
 	oldExecutionsType := roseExecutionsListType
-	var oldAPIURLChanged bool
-	apiURL = srv.URL
-	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-		oldAPIURLChanged = f.Changed
-		f.Changed = true
-	}
+	setupAPIServer(t, handler)
 	t.Cleanup(func() {
-		apiURL = oldURL
-		jsonMode = false
-		quiet = false
 		roseFindingsListSeverity = oldFindingsSeverity
 		roseFindingsListCategory = oldFindingsCategory
 		roseFindingsListStatus = oldFindingsStatus
@@ -52,11 +38,7 @@ func setupRoseServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
 		roseExecutionsListStatus = oldExecutionsStatus
 		roseExecutionsListRepositoryID = oldExecutionsRepositoryID
 		roseExecutionsListType = oldExecutionsType
-		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-			f.Changed = oldAPIURLChanged
-		}
 	})
-	return srv
 }
 
 // roseRepositoryDetailResponse is the stub envelope shared by the

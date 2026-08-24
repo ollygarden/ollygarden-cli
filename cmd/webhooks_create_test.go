@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -13,20 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupWebhooksCreateServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
+func setupWebhooksCreateServer(t *testing.T, handler http.HandlerFunc) {
 	t.Helper()
-	srv := httptest.NewServer(handler)
-	t.Cleanup(srv.Close)
-	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_key")
-	oldURL := apiURL
-	var oldAPIURLChanged bool
-	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-		oldAPIURLChanged = f.Changed
-	}
+	setupAPIServer(t, handler)
 	t.Cleanup(func() {
-		apiURL = oldURL
-		jsonMode = false
-		quiet = false
 		// Reset flag values
 		webhooksCreateName = ""
 		webhooksCreateURL = ""
@@ -34,15 +23,7 @@ func setupWebhooksCreateServer(t *testing.T, handler http.HandlerFunc) *httptest
 		webhooksCreateEnvironments = nil
 		webhooksCreateMinSeverity = "Low"
 		webhooksCreateEnabled = false
-		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-			f.Changed = oldAPIURLChanged
-		}
 	})
-	apiURL = srv.URL
-	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-		f.Changed = true
-	}
-	return srv
 }
 
 func webhookCreateResponse() string {

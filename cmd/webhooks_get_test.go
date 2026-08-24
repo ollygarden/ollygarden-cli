@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/ollygarden/ollygarden-cli/internal/client"
@@ -11,27 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupWebhooksGetServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
+func setupWebhooksGetServer(t *testing.T, handler http.HandlerFunc) {
 	t.Helper()
-	srv := httptest.NewServer(handler)
-	t.Cleanup(srv.Close)
-	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_key")
-	oldURL := apiURL
-	var oldAPIURLChanged bool
-	apiURL = srv.URL
-	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-		oldAPIURLChanged = f.Changed
-		f.Changed = true
-	}
-	t.Cleanup(func() {
-		apiURL = oldURL
-		jsonMode = false
-		quiet = false
-		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-			f.Changed = oldAPIURLChanged
-		}
-	})
-	return srv
+	setupAPIServer(t, handler)
 }
 
 func webhookGetResponse(id, name, url, severity string, enabled bool, eventTypes, environments string) string {

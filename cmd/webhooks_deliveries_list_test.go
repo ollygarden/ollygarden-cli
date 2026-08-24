@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/ollygarden/ollygarden-cli/internal/client"
@@ -11,31 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupWebhooksDeliveriesListServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
+func setupWebhooksDeliveriesListServer(t *testing.T, handler http.HandlerFunc) {
 	t.Helper()
-	srv := httptest.NewServer(handler)
-	t.Cleanup(srv.Close)
-	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_key")
-	oldURL := apiURL
 	oldLimit := webhooksDeliveriesListLimit
 	oldOffset := webhooksDeliveriesListOffset
-	var oldAPIURLChanged bool
-	apiURL = srv.URL
-	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-		oldAPIURLChanged = f.Changed
-		f.Changed = true
-	}
+	setupAPIServer(t, handler)
 	t.Cleanup(func() {
-		apiURL = oldURL
-		jsonMode = false
-		quiet = false
 		webhooksDeliveriesListLimit = oldLimit
 		webhooksDeliveriesListOffset = oldOffset
-		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-			f.Changed = oldAPIURLChanged
-		}
 	})
-	return srv
 }
 
 func deliveryJSON(id, status string, httpCode, attempts int, createdAt string) string {
