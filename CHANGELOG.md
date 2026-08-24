@@ -10,6 +10,9 @@ file records the curated, human-readable summary.
 
 ## [Unreleased]
 
+### Added
+- `update` command for checksum-verified self-updates from stable GitHub releases on macOS, Linux, and Windows, plus a passive interactive update notice.
+
 ## [0.1.0] - 2026-04-21
 
 Initial public release.

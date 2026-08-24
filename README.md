@@ -18,6 +18,31 @@ curl -fsSL https://raw.githubusercontent.com/ollygarden/ollygarden-cli/main/inst
 
 To pin a version or customize the install dir, see `install.sh --help`.
 
+Release binaries can update themselves on macOS, Linux, and Windows:
+
+```bash
+ollygarden update
+```
+
+The command verifies the release checksum and staged binary before replacing
+the current executable. Homebrew or other package-manager installations that
+use a symlink must be updated through that package manager. Development builds
+reporting version `dev` should be refreshed with `go install` instead.
+
+Release builds also check for a newer stable version during normal interactive
+commands. The check runs concurrently and failures stay silent. When an update
+is available, the CLI prints:
+
+```text
+Update Available
+New version v0.3.0 is available. Run `ollygarden update`.
+
+Changelog: https://github.com/ollygarden/ollygarden-cli/releases/tag/v0.3.0
+```
+
+The notice is suppressed for `--json`, `--quiet`, non-interactive output,
+help, version, completion, and update commands.
+
 ## Configuration
 
 Two important environment variables should be set depending on the environment you are working in. The URL and API key differ by environment.
@@ -102,6 +127,7 @@ ollygarden services get <service-id>           # single service details
 ollygarden insights list --status active       # active insights
 ollygarden insights summary <insight-id>       # AI-generated summary
 ollygarden analytics services                  # per-service analytics
+ollygarden update                              # install a newer stable CLI release
 ollygarden webhooks create --name alerts \
   --url https://example.com/hook               # create a webhook
 ```
