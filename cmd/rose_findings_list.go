@@ -48,19 +48,25 @@ func init() {
 }
 
 func runRoseFindingsList(cmd *cobra.Command, args []string) error {
+	f := newFormatter(cmd)
+
 	if roseFindingsListLimit < 1 || roseFindingsListLimit > 100 {
-		return fmt.Errorf("--limit must be between 1 and 100")
+		return roseInvalidParameters(f, "--limit must be between 1 and 100")
 	}
 	if roseFindingsListPage < 1 {
-		return fmt.Errorf("--page must be >= 1")
+		return roseInvalidParameters(f, "--page must be >= 1")
 	}
 	switch roseFindingsListStatus {
 	case "active", "resolved", "all":
 	default:
-		return fmt.Errorf("--status must be one of: active, resolved, all")
+		return roseInvalidParameters(f, "--status must be one of: active, resolved, all")
 	}
-
-	f := newFormatter(cmd)
+	if !roseCSVValuesAllowed(roseFindingsListSeverity, "critical", "high", "medium", "low", "suggestion") {
+		return roseInvalidParameters(f, "--severity must contain only: critical, high, medium, low, suggestion")
+	}
+	if roseFindingsListExecutionID != "" && !roseUUIDPattern.MatchString(roseFindingsListExecutionID) {
+		return roseInvalidParameters(f, "--execution-id must be a UUID")
+	}
 
 	query := url.Values{}
 	query.Set("page", strconv.Itoa(roseFindingsListPage))

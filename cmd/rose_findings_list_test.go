@@ -49,7 +49,7 @@ func TestRoseFindingsListFilters(t *testing.T) {
 		assert.Equal(t, "critical,high", q.Get("severity"))
 		assert.Equal(t, "Sensitive Data", q.Get("category"))
 		assert.Equal(t, "all", q.Get("status"))
-		assert.Equal(t, "exec-1", q.Get("executionId"))
+		assert.Equal(t, roseTestExecutionID, q.Get("executionId"))
 		assert.Equal(t, "2", q.Get("page"))
 		assert.Equal(t, "10", q.Get("page_size"))
 		w.Write([]byte(roseFindingsListResponse(false)))
@@ -57,7 +57,7 @@ func TestRoseFindingsListFilters(t *testing.T) {
 
 	_, _, err := executeCommand("rose", "findings", "list",
 		"--severity", "critical,high", "--category", "Sensitive Data",
-		"--status", "all", "--execution-id", "exec-1", "--page", "2", "--limit", "10")
+		"--status", "all", "--execution-id", roseTestExecutionID, "--page", "2", "--limit", "10")
 	require.NoError(t, err)
 }
 
@@ -95,31 +95,50 @@ func TestRoseFindingsListQuiet(t *testing.T) {
 }
 
 func TestRoseFindingsListBadFlags(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		message string
+	}{
+		{"limit below range", []string{"--limit", "0"}, "--limit must be between 1 and 100"},
+		{"limit above range", []string{"--limit", "101"}, "--limit must be between 1 and 100"},
+		{"page below range", []string{"--page", "0"}, "--page must be >= 1"},
+		{"invalid status", []string{"--status", "bogus"}, "--status must be one of: active, resolved, all"},
+		{"invalid severity", []string{"--severity", "bogus"}, "--severity must contain only: critical, high, medium, low, suggestion"},
+		{"mixed invalid severity", []string{"--severity", "critical,bogus"}, "--severity must contain only: critical, high, medium, low, suggestion"},
+		{"invalid execution ID", []string{"--execution-id", "not-a-uuid"}, "--execution-id must be a UUID"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setupRoseServer(t, func(w http.ResponseWriter, r *http.Request) {
+				t.Error("no request expected for invalid flags")
+			})
+
+			args := append([]string{"rose", "findings", "list"}, tt.args...)
+			out, stderr, err := executeCommand(args...)
+			require.Error(t, err)
+			apiErr, ok := err.(*client.APIError)
+			require.True(t, ok)
+			assert.Equal(t, 2, apiErr.ExitCode())
+			assert.Empty(t, out)
+			assert.Equal(t, "Error: "+tt.message+"\n", stderr)
+		})
+	}
+}
+
+func TestRoseFindingsListBadFlagsJSON(t *testing.T) {
 	setupRoseServer(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Error("no request expected for invalid flags")
 	})
 
-	for _, args := range [][]string{
-		{"rose", "findings", "list", "--limit", "0"},
-		{"rose", "findings", "list", "--limit", "101"},
-		{"rose", "findings", "list", "--page", "0"},
-		{"rose", "findings", "list", "--status", "bogus"},
-	} {
-		_, _, err := executeCommand(args...)
-		require.Error(t, err, "args: %v", args)
-	}
-}
-
-func TestRoseFindingsList400(t *testing.T) {
-	setupRoseServer(t, func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"error":{"code":"INVALID_REQUEST","message":"invalid executionId"},"meta":{"trace_id":"t1"}}`))
-	})
-
-	_, stderr, err := executeCommand("rose", "findings", "list", "--execution-id", "not-a-uuid")
+	out, stderr, err := executeCommand("rose", "findings", "list", "--limit", "0", "--json")
 	require.Error(t, err)
 	apiErr, ok := err.(*client.APIError)
 	require.True(t, ok)
 	assert.Equal(t, 2, apiErr.ExitCode())
-	assert.Contains(t, stderr, "invalid executionId")
+	assert.Empty(t, out)
+	var envelope client.ErrorResponse
+	require.NoError(t, json.Unmarshal([]byte(stderr), &envelope))
+	assert.Equal(t, "INVALID_PARAMETERS", envelope.Error.Code)
+	assert.Equal(t, "--limit must be between 1 and 100", envelope.Error.Message)
 }

@@ -56,14 +56,25 @@ func init() {
 }
 
 func runRoseExecutionsList(cmd *cobra.Command, args []string) error {
+	f := newFormatter(cmd)
+
 	if roseExecutionsListLimit < 1 || roseExecutionsListLimit > 100 {
-		return fmt.Errorf("--limit must be between 1 and 100")
+		return roseInvalidParameters(f, "--limit must be between 1 and 100")
 	}
 	if roseExecutionsListOffset < 0 {
-		return fmt.Errorf("--offset must be >= 0")
+		return roseInvalidParameters(f, "--offset must be >= 0")
 	}
-
-	f := newFormatter(cmd)
+	switch roseExecutionsListStatus {
+	case "", "pending", "running", "completed", "failed":
+	default:
+		return roseInvalidParameters(f, "--status must be one of: pending, running, completed, failed")
+	}
+	if roseExecutionsListRepositoryID != "" && !roseUUIDPattern.MatchString(roseExecutionsListRepositoryID) {
+		return roseInvalidParameters(f, "--repository-id must be a UUID")
+	}
+	if !roseCSVValuesAllowed(roseExecutionsListType, "review", "fix", "instrumentation", "deliveryhero-migrate-execute") {
+		return roseInvalidParameters(f, "--type must contain only: review, fix, instrumentation, deliveryhero-migrate-execute")
+	}
 
 	query := url.Values{}
 	query.Set("limit", strconv.Itoa(roseExecutionsListLimit))

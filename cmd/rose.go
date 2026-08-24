@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +31,8 @@ type roseListEnvelope struct {
 }
 
 const emDash = "—"
+
+var roseUUIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
 // roseGet performs a GET against a Rose endpoint and parses the envelope.
 // API errors are printed through the formatter (so --json mode gets the
@@ -55,6 +59,38 @@ func roseGet(ctx context.Context, f *output.Formatter, path string, query url.Va
 
 func newFormatter(cmd *cobra.Command) *output.Formatter {
 	return output.New(cmd.OutOrStdout(), cmd.ErrOrStderr(), jsonMode, quiet)
+}
+
+func roseInvalidParameters(f *output.Formatter, message string) error {
+	errResp := &client.ErrorResponse{
+		Error: client.ErrorDetail{
+			Code:    "INVALID_PARAMETERS",
+			Message: message,
+		},
+	}
+	apiErr := &client.APIError{StatusCode: http.StatusBadRequest, ErrorResponse: errResp}
+	raw, _ := json.Marshal(errResp)
+	f.PrintError(apiErr.Error(), raw)
+	return apiErr
+}
+
+func roseCSVValuesAllowed(value string, allowed ...string) bool {
+	if value == "" {
+		return true
+	}
+	for _, item := range strings.Split(value, ",") {
+		valid := false
+		for _, candidate := range allowed {
+			if item == candidate {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return false
+		}
+	}
+	return true
 }
 
 func orDash(s string) string {

@@ -6,6 +6,11 @@ import (
 	"testing"
 )
 
+const (
+	roseTestExecutionID  = "11111111-1111-1111-1111-111111111111"
+	roseTestRepositoryID = "22222222-2222-2222-2222-222222222222"
+)
+
 // setupRoseServer points the CLI at a stub API server and restores all
 // rose command flag globals after the test, mirroring the per-command
 // setup helpers used elsewhere in this package.
