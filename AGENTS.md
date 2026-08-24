@@ -72,6 +72,7 @@ golangci-lint run
 
 ## Testing
 
+- Use [TESTING.md](TESTING.md) for dev API verification.
 - Every subcommand must have a test file: `cmd/<noun>_<verb>_test.go`.
 - Use `github.com/stretchr/testify` for assertions.
 - Table-driven tests for flag parsing, output formatting, and error mapping.
