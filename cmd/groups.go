@@ -27,10 +27,34 @@ var webhooksDeliveriesCmd = &cobra.Command{
 	Short: "View webhook deliveries",
 }
 
+var roseCmd = &cobra.Command{
+	Use:   "rose",
+	Short: "View Rose codebase findings, repositories, and executions",
+}
+
+var roseFindingsCmd = &cobra.Command{
+	Use:   "findings",
+	Short: "View Rose codebase findings",
+}
+
+var roseRepositoriesCmd = &cobra.Command{
+	Use:   "repositories",
+	Short: "View repositories connected to Rose",
+}
+
+var roseExecutionsCmd = &cobra.Command{
+	Use:   "executions",
+	Short: "View Rose executions",
+}
+
 func init() {
 	rootCmd.AddCommand(servicesCmd)
 	rootCmd.AddCommand(insightsCmd)
 	rootCmd.AddCommand(analyticsCmd)
 	rootCmd.AddCommand(webhooksCmd)
 	webhooksCmd.AddCommand(webhooksDeliveriesCmd)
+	rootCmd.AddCommand(roseCmd)
+	roseCmd.AddCommand(roseFindingsCmd)
+	roseCmd.AddCommand(roseRepositoriesCmd)
+	roseCmd.AddCommand(roseExecutionsCmd)
 }

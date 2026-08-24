@@ -42,6 +42,17 @@ ollygarden
     └── deliveries
         ├── list <webhook-id>           # GET /webhooks/{id}/deliveries
         └── get <webhook-id> <did>      # GET /webhooks/{id}/deliveries/{did}
+├── rose
+│   ├── findings
+│   │   ├── summary                     # GET /rose/findings/summary
+│   │   ├── list                        # GET /rose/findings
+│   │   └── get <repo-id> <finding-id>  # GET /rose/repositories/{id} (finding extracted client-side)
+│   ├── repositories
+│   │   ├── list                        # GET /rose/repositories
+│   │   └── get <id>                    # GET /rose/repositories/{id}
+│   └── executions
+│       ├── list                        # GET /rose/executions
+│       └── get <id>                    # GET /rose/executions/{id}
 ```
 
 ## 2. Global Flags
@@ -455,6 +466,155 @@ ollygarden webhooks deliveries get <webhook-id> <delivery-id>
 | API | `GET /api/v1/webhooks/{webhook_id}/deliveries/{delivery_id}` |
 |---|---|
 
+---
+
+### 3.25 Rose commands — shared behavior
+
+The `rose` subtree fronts the Rose agent-server via the API's pass-through
+routes (`/api/v1/rose/*`). Because the API forwards Rose responses verbatim,
+these commands deviate from the rest of the CLI in two ways:
+
+- **Pagination lives inside `data`**, not in `meta`: list responses are
+  `data: {data: [...], pagination: {limit, offset, total, hasMore}}`.
+  Pagination hints are derived from `data.pagination`, not `meta.has_more`.
+- **Field names are mixed-case** as emitted by Rose (`executionType`,
+  `repo_full_name`); `--json` passes them through unchanged.
+
+Rose read commands are the only ones implemented so far; execution triggers
+(review/fix) are intentionally out of scope for now.
+
+---
+
+### 3.26 `ollygarden rose findings summary`
+
+```
+ollygarden rose findings summary
+```
+
+Org-wide rollup of active findings: total plus counts faceted by severity
+(`critical`, `high`, `medium`, `low`, `suggestion`) and category
+(`Sensitive Data`, `Coverage & Correctness`, `Volume`, `Governance`,
+`Custom`, plus a synthetic `Uncategorized`).
+
+| API | `GET /api/v1/rose/findings/summary` |
+|---|---|
+
+---
+
+### 3.27 `ollygarden rose findings list`
+
+```
+ollygarden rose findings list [flags]
+```
+
+| Flag | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `--severity` | string | | no | Comma-separated: `critical`, `high`, `medium`, `low`, `suggestion` |
+| `--category` | string | | no | Comma-separated, e.g. `"Sensitive Data,Volume"` |
+| `--status` | string | `active` | no | `active`, `resolved`, `all` |
+| `--execution-id` | UUID | | no | Only findings produced by this execution |
+| `--page` | int | 1 | no | Page number (≥1) |
+| `--limit` | int | 50 | no | Results per page (1-100), sent as `page_size` |
+
+The upstream endpoint paginates with `page`/`page_size` (there is no offset),
+so this command exposes `--page` instead of `--offset`. The human-mode hint is
+`# N more results. Use --page X to see next page.`
+
+| API | `GET /api/v1/rose/findings?page=&page_size=&status=&severity=&category=&executionId=` |
+|---|---|
+
+---
+
+### 3.28 `ollygarden rose findings get`
+
+```
+ollygarden rose findings get <repository-id> <finding-id>
+```
+
+| Arg | Type | Required | Description |
+|---|---|---|---|
+| `repository-id` | UUID | **yes** | Repository the finding belongs to |
+| `finding-id` | string | **yes** | Finding ID (`otel-<12 hex>`) |
+
+There is no per-finding API endpoint; full finding detail (summary, why, fix,
+locations) is only embedded in the repository detail response. The CLI fetches
+the repository and extracts the finding client-side; `--json` prints just that
+finding wrapped in the standard `{data, meta}` envelope. A finding ID absent
+from the repository exits 4 with code `FINDING_NOT_FOUND`.
+
+| API | `GET /api/v1/rose/repositories/{repository_id}` |
+|---|---|
+
+---
+
+### 3.29 `ollygarden rose repositories list`
+
+```
+ollygarden rose repositories list
+```
+
+Human mode flattens the installation nesting to one row per repository
+(installation metadata remains available via `--json`). The endpoint does not
+paginate meaningfully (single installation page), so no pagination flags.
+
+| API | `GET /api/v1/rose/repositories` |
+|---|---|
+
+---
+
+### 3.30 `ollygarden rose repositories get`
+
+```
+ollygarden rose repositories get <repository-id>
+```
+
+| Arg | Type | Required | Description |
+|---|---|---|---|
+| `repository-id` | UUID | **yes** | Repository ID |
+
+Shows repository state, instrumentation metadata, and the active findings
+table.
+
+| API | `GET /api/v1/rose/repositories/{repository_id}` |
+|---|---|
+
+---
+
+### 3.31 `ollygarden rose executions list`
+
+```
+ollygarden rose executions list [flags]
+```
+
+| Flag | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `--limit` | int | 50 | no | Max items (1-100) |
+| `--offset` | int | 0 | no | Pagination offset |
+| `--status` | string | | no | `pending`, `running`, `completed`, `failed` |
+| `--repository-id` | UUID | | no | Filter by repository |
+| `--type` | string | | no | Comma-separated: `review`, `fix`, `instrumentation`, `deliveryhero-migrate-execute` |
+
+| API | `GET /api/v1/rose/executions?limit=&offset=&status=&repositoryId=&executionType=` |
+|---|---|
+
+---
+
+### 3.32 `ollygarden rose executions get`
+
+```
+ollygarden rose executions get <execution-id>
+```
+
+| Arg | Type | Required | Description |
+|---|---|---|---|
+| `execution-id` | UUID | **yes** | Execution ID |
+
+Shows the execution summary plus its phase table. The event timeline and
+agent activity are available via `--json`.
+
+| API | `GET /api/v1/rose/executions/{execution_id}` |
+|---|---|
+
 ## 4. I/O Contract
 
 | Rule | Behavior |
@@ -466,7 +626,7 @@ ollygarden webhooks deliveries get <webhook-id> <delivery-id>
 | **stderr** | Diagnostics, errors, progress messages, confirmation prompts. |
 | **TTY detection** | Auto-detect via `isatty(stdout)`. Non-TTY disables colors and table truncation. Prompts only when stdin is TTY. |
 | **`NO_COLOR`** | Respected. When set, disable all ANSI color codes regardless of TTY. |
-| **Pagination hint** | When `meta.has_more` is true in human mode, print `# N more results. Use --offset X to see next page.` on stderr. |
+| **Pagination hint** | When `meta.has_more` is true in human mode, print `# N more results. Use --offset X to see next page.` on stderr. Rose lists read `data.pagination` instead (see §3.25); `rose findings list` hints with `--page`. |
 
 ## 5. Exit Codes
 
@@ -530,6 +690,7 @@ These appear in JSON-mode error envelopes (`error.code`) for failures the CLI su
 | `CONFIG_WRITE_FAILED`   | 7 | Atomic-rename or temp-file write failed |
 | `TOKEN_FILE_NOT_FOUND`  | 2 | `--token-file PATH` doesn't exist or isn't readable |
 | `CONFIRM_REQUIRED`      | 2 | `auth logout --all` in non-TTY without `--confirm` |
+| `FINDING_NOT_FOUND`     | 4 | `rose findings get` — finding ID not present in the repository |
 
 ## 6. Credential Storage
 
@@ -624,6 +785,16 @@ ollygarden webhooks deliveries list <id> --limit 5
 
 # 10. List all services grouped, sorted by name, extract names with jq
 ollygarden services grouped --sort name-asc --json | jq '.data[].name'
+
+# 11. Rose: findings overview, then drill into the critical ones
+ollygarden rose findings summary
+ollygarden rose findings list --severity critical,high
+
+# 12. Rose: full detail for one finding (repository ID from the list output)
+ollygarden rose findings get ddca7297-a16f-4ac4-bd31-d20c90f3cdaa otel-6576685e6e1f
+
+# 13. Rose: recent failed executions for a repository
+ollygarden rose executions list --status failed --repository-id ddca7297-a16f-4ac4-bd31-d20c90f3cdaa --limit 10
 ```
 
 ## 10. Implementation Notes
