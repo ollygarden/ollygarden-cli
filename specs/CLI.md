@@ -18,6 +18,8 @@ ollygarden
 │   ├── status                          # show active credential, optional probe
 │   ├── use-context <name>              # set current-context
 │   └── list-contexts                   # list saved contexts (no keys shown)
+├── update                              # install latest stable CLI release
+├── version                             # show CLI version and build info
 ├── organization                        # GET /organization
 ├── services
 │   ├── list                            # GET /services
@@ -615,6 +617,57 @@ agent activity are available via `--json`.
 | API | `GET /api/v1/rose/executions/{execution_id}` |
 |---|---|
 
+---
+
+### 3.33 `ollygarden update`
+
+```
+ollygarden update [flags]
+```
+
+| Flag | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `--force` | bool | `false` | no | Reinstall the latest stable release when it is already current. |
+
+Checks the latest stable GitHub release and exits successfully without making
+changes when the running version is current or newer. When an update is
+available, the command downloads the archive for the running OS and
+architecture, verifies it against the release's `checksums.txt`, runs the
+staged binary to verify its version, and then replaces the current executable.
+
+The command supports Linux, macOS, and Windows on amd64 and arm64. It does not
+require OllyGarden API credentials. Package-manager installations exposed
+through a symlink must be upgraded with that package manager. Development
+builds reporting version `dev` cannot self-update.
+
+Human progress is written to stderr. JSON mode returns
+`{data:{current_version,latest_version,executable,updated,forced,current_is_newer},meta}`
+and suppresses human progress. `--quiet` suppresses successful output unless
+`--json` is also set. Failures use exit code `1` and JSON error code
+`UPDATE_FAILED`.
+
+### Passive update notice
+
+Every eligible interactive command starts one latest-release check concurrently
+with normal command work. After a successful command, a completed check that
+found a newer stable version prints this notice to stderr:
+
+```text
+Update Available
+New version v0.3.0 is available. Run `ollygarden update`.
+
+Changelog: https://github.com/ollygarden/ollygarden-cli/releases/tag/v0.3.0
+```
+
+The check has no cache and runs on every eligible invocation, matching Pi's
+passive-check behavior. Network, HTTP, timeout, and malformed-response failures
+are silent. The CLI waits at most 250 ms after successful command completion
+for the concurrent check; a slow check never fails the command.
+
+The check and notice are suppressed for `--json`, `--quiet`, non-TTY stdout,
+help, `version`, `completion`, `update`, and development builds reporting
+version `dev`. There is no update-check opt-out environment variable.
+
 ## 4. I/O Contract
 
 | Rule | Behavior |
@@ -691,6 +744,7 @@ These appear in JSON-mode error envelopes (`error.code`) for failures the CLI su
 | `TOKEN_FILE_NOT_FOUND`  | 2 | `--token-file PATH` doesn't exist or isn't readable |
 | `CONFIRM_REQUIRED`      | 2 | `auth logout --all` in non-TTY without `--confirm` |
 | `FINDING_NOT_FOUND`     | 4 | `rose findings get` — finding ID not present in the repository |
+| `UPDATE_FAILED`         | 1 | CLI release discovery, verification, or executable replacement failed |
 
 ## 6. Credential Storage
 
@@ -741,8 +795,13 @@ Flag value  >  Environment variable  >  Built-in default
 |---|---|---|---|
 | API key | *(none)* | `OLLYGARDEN_API_KEY` | *(required)* |
 | API URL | `--api-url` | `OLLYGARDEN_API_URL` | `https://api.ollygarden.cloud` |
+| GitHub token | *(none)* | `GITHUB_TOKEN` | *(none)* — optional; raises GitHub API limits for explicit self-update discovery |
 
 No config file for secrets (by design).
+
+No OllyGarden config setting controls updates. `GITHUB_TOKEN`, when set, is
+sent only to the `ollygarden update` command's GitHub API discovery request,
+never to the passive check or release asset download hosts.
 
 ## 9. Examples
 
@@ -795,6 +854,9 @@ ollygarden rose findings get ddca7297-a16f-4ac4-bd31-d20c90f3cdaa otel-6576685e6
 
 # 13. Rose: recent failed executions for a repository
 ollygarden rose executions list --status failed --repository-id ddca7297-a16f-4ac4-bd31-d20c90f3cdaa --limit 10
+
+# 14. Install the latest stable CLI release when one is available
+ollygarden update
 ```
 
 ## 10. Implementation Notes

@@ -35,6 +35,8 @@ var rootCmd = &cobra.Command{
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		startVersionCheck(cmd)
+
 		// URL scheme validation runs for every command, including the auth
 		// subtree — it's a pure flag check that doesn't need creds. Without
 		// this, `ollygarden auth login --api-url api.ollygarden.cloud` would
@@ -81,15 +83,18 @@ var rootCmd = &cobra.Command{
 		apiURL = creds.APIURL
 		return nil
 	},
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		showVersionNotice(cmd)
+	},
 }
 
 // skipAuthResolution returns true for commands that should not have
-// credentials resolved before running: help, version, the bare root, and
-// any command in the `auth` subtree (auth login does the resolution
+// credentials resolved before running: help, update, version, the bare root,
+// and any command in the `auth` subtree (auth login does the resolution
 // itself, the others either don't need creds or compute them on demand).
 func skipAuthResolution(cmd *cobra.Command) bool {
 	name := cmd.Name()
-	if name == "help" || name == "version" || name == "ollygarden" {
+	if name == "help" || cmd == updateCmd || name == "version" || name == "ollygarden" {
 		return true
 	}
 	for c := cmd; c != nil; c = c.Parent() {
@@ -141,10 +146,9 @@ func Execute() {
 // handleRootErr maps a command error to an exit code and writes any
 // message that hasn't already been emitted by the command itself.
 //
-// APIError messages are intentionally NOT printed here: the originating
-// command writes them via output.Formatter.PrintError, which is the only
-// path that respects --json mode. Printing again here would duplicate the
-// human-format line on stderr.
+// APIError and reportedError messages are intentionally NOT printed here: the
+// originating command already wrote the mode-appropriate error. Printing
+// again here would duplicate the message on stderr.
 func handleRootErr(err error, stderr io.Writer) int {
 	if err == nil {
 		return exitcode.Success
@@ -152,7 +156,10 @@ func handleRootErr(err error, stderr io.Writer) int {
 
 	var authErr *auth.Error
 	var apiErr *client.APIError
+	var reportedErr *reportedError
 	switch {
+	case errors.As(err, &reportedErr):
+		return exitcode.General
 	case errors.As(err, &authErr):
 		fmt.Fprintln(stderr, "Error: "+authErr.Error())
 		return authErr.ExitCode
