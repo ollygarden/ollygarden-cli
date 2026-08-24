@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+export PATH="$HOME/.local/bin:$PATH"
+export GOTOOLCHAIN=local
+
+required_go_version="$(awk '$1 == "go" { print $2; exit }' go.mod)"
+if ! command -v go >/dev/null 2>&1 || [[ "$(go version)" != "go version go${required_go_version} "* ]]; then
+    printf 'Go %s is unavailable; run .agents/setup\n' "$required_go_version" >&2
+    exit 1
+fi
+
+if ! command -v golangci-lint >/dev/null 2>&1 || [[ "$(golangci-lint version)" != *"version 2.13.1"* ]]; then
+    printf 'golangci-lint 2.13.1 is unavailable; run .agents/setup\n' >&2
+    exit 1
+fi
+
+printf 'Orb prerequisites are ready.\n'
