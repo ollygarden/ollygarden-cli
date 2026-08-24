@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -27,6 +28,29 @@ func executeCommand(args ...string) (string, string, error) {
 
 	err := rootCmd.Execute()
 	return stdout.String(), stderr.String(), err
+}
+
+func setupAPIServer(t *testing.T, handler http.HandlerFunc) {
+	t.Helper()
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_key")
+
+	oldURL := apiURL
+	var oldAPIURLChanged bool
+	apiURL = srv.URL
+	if flag := rootCmd.PersistentFlags().Lookup("api-url"); flag != nil {
+		oldAPIURLChanged = flag.Changed
+		flag.Changed = true
+	}
+	t.Cleanup(func() {
+		apiURL = oldURL
+		jsonMode = false
+		quiet = false
+		if flag := rootCmd.PersistentFlags().Lookup("api-url"); flag != nil {
+			flag.Changed = oldAPIURLChanged
+		}
+	})
 }
 
 func TestHelpShowsCommandGroups(t *testing.T) {

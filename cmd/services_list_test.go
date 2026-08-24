@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/ollygarden/ollygarden-cli/internal/client"
@@ -11,31 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupServicesServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
+func setupServicesServer(t *testing.T, handler http.HandlerFunc) {
 	t.Helper()
-	srv := httptest.NewServer(handler)
-	t.Cleanup(srv.Close)
-	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_key")
-	oldURL := apiURL
 	oldLimit := servicesListLimit
 	oldOffset := servicesListOffset
-	var oldAPIURLChanged bool
-	apiURL = srv.URL
-	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-		oldAPIURLChanged = f.Changed
-		f.Changed = true
-	}
+	setupAPIServer(t, handler)
 	t.Cleanup(func() {
-		apiURL = oldURL
-		jsonMode = false
-		quiet = false
 		servicesListLimit = oldLimit
 		servicesListOffset = oldOffset
-		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-			f.Changed = oldAPIURLChanged
-		}
 	})
-	return srv
 }
 
 func servicesListResponse(services string, total int, hasMore bool) string {

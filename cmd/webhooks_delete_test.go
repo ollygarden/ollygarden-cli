@@ -3,7 +3,6 @@ package cmd
 import (
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -12,38 +11,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupWebhooksDeleteServer(t *testing.T, handler http.HandlerFunc) *httptest.Server {
+func setupWebhooksDeleteServer(t *testing.T, handler http.HandlerFunc) {
 	t.Helper()
-	srv := httptest.NewServer(handler)
-	t.Cleanup(srv.Close)
-	t.Setenv("OLLYGARDEN_API_KEY", "og_sk_test_key")
 
 	// Reset cobra flag state that persists across Execute() calls
 	webhooksDeleteCmd.Flags().Set("help", "false")
 
-	oldURL := apiURL
 	oldIsTerminal := stdinIsTerminal
 	oldReader := stdinReader
-	var oldAPIURLChanged bool
-	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-		oldAPIURLChanged = f.Changed
-	}
+	setupAPIServer(t, handler)
 	t.Cleanup(func() {
-		apiURL = oldURL
-		jsonMode = false
-		quiet = false
 		webhooksDeleteConfirm = false
 		stdinIsTerminal = oldIsTerminal
 		stdinReader = oldReader
-		if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-			f.Changed = oldAPIURLChanged
-		}
 	})
-	apiURL = srv.URL
-	if f := rootCmd.PersistentFlags().Lookup("api-url"); f != nil {
-		f.Changed = true
-	}
-	return srv
 }
 
 func webhookDeleteGetResponse() string {
