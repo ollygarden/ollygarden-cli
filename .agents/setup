@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$repo_root"
+
+readonly go_version="1.26.6"
+readonly golangci_lint_version="2.13.1"
+readonly install_root="$HOME/.local/share/ollygarden-cli"
+readonly bin_dir="$HOME/.local/bin"
+
+export PATH="$bin_dir:$PATH"
+export GOTOOLCHAIN=local
+
+run_step() {
+    local label="$1"
+    shift
+    local started=$SECONDS
+
+    printf '==> %s\n' "$label"
+    "$@"
+    printf '    completed in %ss\n' "$((SECONDS - started))"
+}
+
+as_root() {
+    if ((EUID == 0)); then
+        "$@"
+    else
+        sudo -n "$@"
+    fi
+}
+
+install_system_packages() {
+    local -a required_packages=(ca-certificates curl gcc libc6-dev tar)
+    local -a missing_packages=()
+    local package
+
+    for package in "${required_packages[@]}"; do
+        if [[ "$(dpkg-query -W -f='${db:Status-Status}' "$package" 2>/dev/null || true)" != "installed" ]]; then
+            missing_packages+=("$package")
+        fi
+    done
+
+    if ((${#missing_packages[@]} == 0)); then
+        printf '    all required system packages are already installed\n'
+        return
+    fi
+
+    as_root apt-get update
+    as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y "${missing_packages[@]}"
+}
+
+select_architecture() {
+    case "$(uname -m)" in
+        x86_64)
+            go_arch="amd64"
+            go_sha256="708effb774be8237570d0add163225abbdfaf4fca28b2611df167beba4feef89"
+            golangci_lint_sha256="b17bfbc9d4aaa48be7f4f1ce3240bc3d8200c870c072bacf15c26219e2cfb9cc"
+            ;;
+        aarch64 | arm64)
+            go_arch="arm64"
+            go_sha256="d0507e9e9d7fe012aae570108cbd76c15de879e17130ab8cb90d4d7445cb1f2e"
+            golangci_lint_sha256="908317c23db18448f924e853b3d8a659fd919614cd438f224810a4053daa2607"
+            ;;
+        *)
+            printf 'Unsupported orb architecture: %s\n' "$(uname -m)" >&2
+            exit 1
+            ;;
+    esac
+}
+
+install_go() {
+    local go_root="$install_root/go/$go_version"
+    local archive="go${go_version}.linux-${go_arch}.tar.gz"
+
+    if [[ ! -x "$go_root/bin/go" ]] || [[ "$($go_root/bin/go version)" != "go version go${go_version} linux/${go_arch}" ]]; then
+        curl -fsSL --retry 3 --retry-all-errors "https://go.dev/dl/$archive" -o "$tmp_dir/$archive"
+        printf '%s  %s\n' "$go_sha256" "$tmp_dir/$archive" | sha256sum -c -
+        tar -C "$tmp_dir" -xzf "$tmp_dir/$archive"
+
+        rm -rf "$go_root"
+        mkdir -p "$(dirname "$go_root")"
+        mv "$tmp_dir/go" "$go_root"
+    else
+        printf '    Go %s is already installed\n' "$go_version"
+    fi
+
+    mkdir -p "$bin_dir"
+    ln -sfn "$go_root/bin/go" "$bin_dir/go"
+    ln -sfn "$go_root/bin/gofmt" "$bin_dir/gofmt"
+}
+
+install_golangci_lint() {
+    local lint_root="$install_root/golangci-lint/$golangci_lint_version"
+    local archive="golangci-lint-${golangci_lint_version}-linux-${go_arch}.tar.gz"
+
+    if [[ ! -x "$lint_root/golangci-lint" ]] || [[ "$($lint_root/golangci-lint version)" != *"version $golangci_lint_version"* ]]; then
+        curl -fsSL --retry 3 --retry-all-errors \
+            "https://github.com/golangci/golangci-lint/releases/download/v${golangci_lint_version}/$archive" \
+            -o "$tmp_dir/$archive"
+        printf '%s  %s\n' "$golangci_lint_sha256" "$tmp_dir/$archive" | sha256sum -c -
+        tar -C "$tmp_dir" -xzf "$tmp_dir/$archive"
+
+        rm -rf "$lint_root"
+        mkdir -p "$lint_root"
+        mv "$tmp_dir/golangci-lint-${golangci_lint_version}-linux-${go_arch}/golangci-lint" "$lint_root/golangci-lint"
+    else
+        printf '    golangci-lint %s is already installed\n' "$golangci_lint_version"
+    fi
+
+    mkdir -p "$bin_dir"
+    ln -sfn "$lint_root/golangci-lint" "$bin_dir/golangci-lint"
+}
+
+download_go_modules() {
+    go mod download
+}
+
+module_go_version="$(awk '$1 == "go" { print $2; exit }' go.mod)"
+if [[ "$module_go_version" != "$go_version" ]]; then
+    printf 'go.mod requires Go %s, but .agents/setup installs Go %s; update the setup script and checksums\n' \
+        "$module_go_version" "$go_version" >&2
+    exit 1
+fi
+
+select_architecture
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+
+run_step "Checking system packages" install_system_packages
+run_step "Installing Go $go_version" install_go
+run_step "Installing golangci-lint $golangci_lint_version" install_golangci_lint
+run_step "Downloading Go modules" download_go_modules
+
+printf 'Orb setup complete: %s; %s\n' "$(go version)" "$(golangci-lint version | head -n 1)"
