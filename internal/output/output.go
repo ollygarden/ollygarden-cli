@@ -102,6 +102,19 @@ func (f *Formatter) PrintPaginationHint(total, offset, limit int) {
 	fmt.Fprintf(f.errWriter, "# %d more results. Use --offset %d to see next page.\n", remaining, nextOffset)
 }
 
+// PrintPageHint is the page-based counterpart of PrintPaginationHint for
+// endpoints that paginate with page/page_size instead of offset.
+func (f *Formatter) PrintPageHint(total, page, pageSize int) {
+	if f.quiet {
+		return
+	}
+	remaining := total - page*pageSize
+	if remaining <= 0 {
+		return
+	}
+	fmt.Fprintf(f.errWriter, "# %d more results. Use --page %d to see next page.\n", remaining, page+1)
+}
+
 // IsQuiet returns whether quiet mode is enabled.
 func (f *Formatter) IsQuiet() bool {
 	return f.quiet

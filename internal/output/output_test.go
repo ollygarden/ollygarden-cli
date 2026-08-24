@@ -89,3 +89,21 @@ func TestIsJSON(t *testing.T) {
 	f, _, _ := newTestFormatter(true, false)
 	assert.True(t, f.IsJSON())
 }
+
+func TestPageHint(t *testing.T) {
+	f, _, errOut := newTestFormatter(false, false)
+	f.PrintPageHint(29, 1, 10)
+	assert.Equal(t, "# 19 more results. Use --page 2 to see next page.\n", errOut.String())
+}
+
+func TestPageHintNoMore(t *testing.T) {
+	f, _, errOut := newTestFormatter(false, false)
+	f.PrintPageHint(10, 1, 10)
+	assert.Empty(t, errOut.String())
+}
+
+func TestPageHintQuiet(t *testing.T) {
+	f, _, errOut := newTestFormatter(false, true)
+	f.PrintPageHint(29, 1, 10)
+	assert.Empty(t, errOut.String())
+}
