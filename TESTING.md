@@ -1,4 +1,4 @@
-# Operations
+# Testing
 
 Use the dev API for manual verification after local checks pass. Required
 credentials are environment variables; never print or commit the API key.
