@@ -12,7 +12,23 @@ This is the actively maintained public OllyGarden CLI. Repository-specific devel
 curl -fsSL https://raw.githubusercontent.com/ollygarden/ollygarden-cli/main/install.sh | sh
 ```
 
-**Windows** — download the zip from [releases](https://github.com/ollygarden/ollygarden-cli/releases/latest), extract, put `ollygarden.exe` on your `PATH`.
+**Windows**
+
+1. Download the latest Windows zip from
+   [releases](https://github.com/ollygarden/ollygarden-cli/releases/latest).
+   Most PCs use `windows_amd64`; ARM-based PCs use `windows_arm64`.
+2. Extract it to a permanent directory, such as
+   `%LOCALAPPDATA%\OllyGarden`.
+3. Add that directory to your user `Path` under **Settings → Environment
+   Variables → User variables → Path → New**.
+4. Open a new terminal and verify the installation:
+
+   ```cmd
+   ollygarden version
+   ```
+
+If Windows still runs an older copy, locate every installation with
+`where.exe ollygarden`.
 
 **From source** — `go install github.com/ollygarden/ollygarden-cli/cmd/ollygarden@latest` (reports version `dev`).
 
