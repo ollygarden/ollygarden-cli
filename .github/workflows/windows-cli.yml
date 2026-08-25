@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Install and verify released CLI
-        shell: pwsh
+        shell: powershell
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
