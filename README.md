@@ -12,27 +12,22 @@ This is the actively maintained public OllyGarden CLI. Repository-specific devel
 curl -fsSL https://raw.githubusercontent.com/ollygarden/ollygarden-cli/main/install.sh | sh
 ```
 
-**Windows**
+**Windows (PowerShell)**
 
-1. Download the latest Windows zip from
-   [releases](https://github.com/ollygarden/ollygarden-cli/releases/latest).
-   Most PCs use `windows_amd64`; ARM-based PCs use `windows_arm64`.
-2. Extract it to a permanent directory, such as
-   `%LOCALAPPDATA%\OllyGarden`.
-3. Add that directory to your user `Path` under **Settings → Environment
-   Variables → User variables → Path → New**.
-4. Open a new terminal and verify the installation:
+```powershell
+irm https://raw.githubusercontent.com/ollygarden/ollygarden-cli/main/install.ps1 | iex
+```
 
-   ```cmd
-   ollygarden version
-   ```
+The installer selects the correct architecture, verifies the release checksum,
+installs to `%LOCALAPPDATA%\OllyGarden`, and adds it to your user `Path`.
 
-If Windows still runs an older copy, locate every installation with
-`where.exe ollygarden`.
+To install manually, download a Windows zip from
+[releases](https://github.com/ollygarden/ollygarden-cli/releases/latest),
+extract it, and add its directory to your user `Path`.
 
 **From source** — `go install github.com/ollygarden/ollygarden-cli/cmd/ollygarden@latest` (reports version `dev`).
 
-To pin a version or customize the install dir, see `install.sh --help`.
+Both installers honor `OLLYGARDEN_VERSION` and `OLLYGARDEN_INSTALL_DIR`.
 
 Release binaries can update themselves on macOS, Linux, and Windows:
 
