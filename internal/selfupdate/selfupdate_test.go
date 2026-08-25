@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -107,7 +108,9 @@ func TestExtractBinary(t *testing.T) {
 			assert.Equal(t, contents, got)
 			info, err := os.Stat(targetPath)
 			require.NoError(t, err)
-			assert.Equal(t, os.FileMode(0o751), info.Mode().Perm())
+			if runtime.GOOS != "windows" {
+				assert.Equal(t, os.FileMode(0o751), info.Mode().Perm())
+			}
 		})
 	}
 }
