@@ -76,6 +76,6 @@ jobs:
 
           $help = ollygarden --help | Out-String
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if ($help -notmatch 'CLI client for the OllyGarden REST API') {
+          if ($help -notmatch 'CLI client for the OllyGarden API') {
             throw 'Installed CLI did not return the expected help text'
           }
