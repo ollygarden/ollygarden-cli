@@ -34,8 +34,8 @@ Environment variables:
                            the GitHub CLI is installed.
 
 Supports macOS and Linux on amd64 and arm64.
-For Windows, download the zip from:
-  https://github.com/$REPO/releases/latest
+For Windows PowerShell:
+  irm https://raw.githubusercontent.com/$REPO/main/install.ps1 | iex
 EOF
 }
 
