@@ -12,11 +12,22 @@ This is the actively maintained public OllyGarden CLI. Repository-specific devel
 curl -fsSL https://raw.githubusercontent.com/ollygarden/ollygarden-cli/main/install.sh | sh
 ```
 
-**Windows** — download the zip from [releases](https://github.com/ollygarden/ollygarden-cli/releases/latest), extract, put `ollygarden.exe` on your `PATH`.
+**Windows (PowerShell)**
+
+```powershell
+irm https://raw.githubusercontent.com/ollygarden/ollygarden-cli/main/install.ps1 | iex
+```
+
+The installer selects the correct architecture, verifies the release checksum,
+installs to `%LOCALAPPDATA%\OllyGarden`, and adds it to your user `Path`.
+
+To install manually, download a Windows zip from
+[releases](https://github.com/ollygarden/ollygarden-cli/releases/latest),
+extract it, and add its directory to your user `Path`.
 
 **From source** — `go install github.com/ollygarden/ollygarden-cli/cmd/ollygarden@latest` (reports version `dev`).
 
-To pin a version or customize the install dir, see `install.sh --help`.
+Both installers honor `OLLYGARDEN_VERSION` and `OLLYGARDEN_INSTALL_DIR`.
 
 Release binaries can update themselves on macOS, Linux, and Windows:
 
