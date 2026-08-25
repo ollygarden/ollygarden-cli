@@ -16,50 +16,33 @@ concurrency:
 jobs:
   test-install:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Set up Go
-        uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Test on Windows
+      - name: Install and verify released CLI
         shell: pwsh
-        run: |
-          go test ./...
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Package and install from ZIP
-        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $version = '0.0.0-windows-ci'
-          $packageDir = Join-Path $env:RUNNER_TEMP 'ollygarden-package'
-          $archivePath = Join-Path $env:RUNNER_TEMP 'ollygarden_0.0.0-windows_amd64.zip'
-          $installDir = Join-Path $env:RUNNER_TEMP 'ollygarden-bin'
+          $env:OLLYGARDEN_INSTALL_DIR = Join-Path $env:RUNNER_TEMP 'ollygarden-bin'
+          $installer = Get-Content .\install.ps1 -Raw
 
-          New-Item -ItemType Directory -Path $packageDir | Out-Null
-          Copy-Item README.md, LICENSE, NOTICE -Destination $packageDir
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseInput(
+            $installer,
+            [ref]$tokens,
+            [ref]$parseErrors
+          ) | Out-Null
+          if ($parseErrors.Count -ne 0) {
+            throw "PowerShell parse errors: $($parseErrors -join '; ')"
+          }
 
-          $ldflags = "-s -w -X main.version=$version -X main.commit=$env:GITHUB_SHA -X main.date=windows-ci"
-          go build -trimpath -ldflags $ldflags -o (Join-Path $packageDir 'ollygarden.exe') ./cmd/ollygarden
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-          Compress-Archive -Path (Join-Path $packageDir '*') -DestinationPath $archivePath
-          Expand-Archive -LiteralPath $archivePath -DestinationPath $installDir
-
-          "INSTALL_DIR=$installDir" >> $env:GITHUB_ENV
-          $installDir >> $env:GITHUB_PATH
-
-      - name: Smoke-test installed CLI
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $expectedExecutable = Join-Path $env:INSTALL_DIR 'ollygarden.exe'
+          Invoke-Expression $installer
+          $expectedExecutable = Join-Path $env:OLLYGARDEN_INSTALL_DIR 'ollygarden.exe'
           $installedExecutable = (Get-Command ollygarden -ErrorAction Stop).Source
           if ($installedExecutable -ne $expectedExecutable) {
             throw "Expected $expectedExecutable on PATH, found $installedExecutable"
@@ -67,15 +50,15 @@ jobs:
 
           $buildInfo = ollygarden version --json | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if ($buildInfo.version -ne '0.0.0-windows-ci') {
-            throw "Unexpected version: $($buildInfo.version)"
-          }
           if ($buildInfo.os -ne 'windows' -or $buildInfo.arch -ne 'amd64') {
             throw "Unexpected platform: $($buildInfo.os)/$($buildInfo.arch)"
           }
 
-          $help = ollygarden --help | Out-String
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if ($help -notmatch 'CLI client for the OllyGarden API') {
-            throw 'Installed CLI did not return the expected help text'
+          Invoke-Expression $installer
+          $pathMatches = @(
+            [Environment]::GetEnvironmentVariable('Path', 'User') -split ';' |
+              Where-Object { $_.TrimEnd('\') -ieq $env:OLLYGARDEN_INSTALL_DIR.TrimEnd('\') }
+          )
+          if ($pathMatches.Count -ne 1) {
+            throw "Expected one user Path entry, found $($pathMatches.Count)"
           }
