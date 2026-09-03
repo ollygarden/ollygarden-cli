@@ -526,6 +526,8 @@ ollygarden rose findings list [flags]
 |---|---|---|---|---|
 | `--severity` | string | | no | Comma-separated: `critical`, `high`, `medium`, `low`, `suggestion` |
 | `--category` | string | | no | Comma-separated, e.g. `"Sensitive Data,Volume"` |
+| `--status` | string | `active` | no | `active`, `resolved`, `all` |
+| `--execution-id` | UUID | | no | Only findings produced by this execution |
 | `--page` | int | 1 | no | Page number (≥1) |
 | `--limit` | int | 50 | no | Results per page (1-100), sent as `page_size` |
 | `--dismissed` | string | `false` | no | `false`, `true`, `all` |
@@ -534,7 +536,7 @@ The upstream endpoint paginates with `page`/`page_size` (there is no offset),
 so this command exposes `--page` instead of `--offset`. The human-mode hint is
 `# N more results. Use --page X to see next page.`
 
-| API | `GET /api/v1/rose/findings?page=&page_size=&severity=&category=&dismissed=` |
+| API | `GET /api/v1/rose/findings?page=&page_size=&status=&severity=&category=&executionId=&dismissed=` |
 |---|---|
 
 ---

@@ -10,11 +10,13 @@ import (
 )
 
 var (
-	roseFindingsListSeverity  string
-	roseFindingsListCategory  string
-	roseFindingsListPage      int
-	roseFindingsListLimit     int
-	roseFindingsListDismissed string
+	roseFindingsListSeverity    string
+	roseFindingsListCategory    string
+	roseFindingsListStatus      string
+	roseFindingsListExecutionID string
+	roseFindingsListPage        int
+	roseFindingsListLimit       int
+	roseFindingsListDismissed   string
 )
 
 type roseFindingListItem struct {
@@ -40,6 +42,8 @@ func init() {
 	roseFindingsCmd.AddCommand(roseFindingsListCmd)
 	roseFindingsListCmd.Flags().StringVar(&roseFindingsListSeverity, "severity", "", "Filter by severity (comma-separated: critical, high, medium, low, suggestion)")
 	roseFindingsListCmd.Flags().StringVar(&roseFindingsListCategory, "category", "", "Filter by category (comma-separated, e.g. \"Sensitive Data,Volume\")")
+	roseFindingsListCmd.Flags().StringVar(&roseFindingsListStatus, "status", "active", "Finding status (active, resolved, all)")
+	roseFindingsListCmd.Flags().StringVar(&roseFindingsListExecutionID, "execution-id", "", "Only findings produced by this execution")
 	roseFindingsListCmd.Flags().IntVar(&roseFindingsListPage, "page", 1, "Page number (≥1)")
 	roseFindingsListCmd.Flags().IntVar(&roseFindingsListLimit, "limit", 50, "Results per page (1-100)")
 	roseFindingsListCmd.Flags().StringVar(&roseFindingsListDismissed, "dismissed", "false", "Dismissed filter (false, true, all)")
@@ -54,6 +58,11 @@ func runRoseFindingsList(cmd *cobra.Command, args []string) error {
 	if roseFindingsListPage < 1 {
 		return roseInvalidParameters(f, "--page must be >= 1")
 	}
+	switch roseFindingsListStatus {
+	case "active", "resolved", "all":
+	default:
+		return roseInvalidParameters(f, "--status must be one of: active, resolved, all")
+	}
 	switch roseFindingsListDismissed {
 	case "false", "true", "all":
 	default:
@@ -62,16 +71,23 @@ func runRoseFindingsList(cmd *cobra.Command, args []string) error {
 	if !roseCSVValuesAllowed(roseFindingsListSeverity, "critical", "high", "medium", "low", "suggestion") {
 		return roseInvalidParameters(f, "--severity must contain only: critical, high, medium, low, suggestion")
 	}
+	if roseFindingsListExecutionID != "" && !roseUUIDPattern.MatchString(roseFindingsListExecutionID) {
+		return roseInvalidParameters(f, "--execution-id must be a UUID")
+	}
 
 	query := url.Values{}
 	query.Set("page", strconv.Itoa(roseFindingsListPage))
 	query.Set("page_size", strconv.Itoa(roseFindingsListLimit))
+	query.Set("status", roseFindingsListStatus)
 	query.Set("dismissed", roseFindingsListDismissed)
 	if roseFindingsListSeverity != "" {
 		query.Set("severity", roseFindingsListSeverity)
 	}
 	if roseFindingsListCategory != "" {
 		query.Set("category", roseFindingsListCategory)
+	}
+	if roseFindingsListExecutionID != "" {
+		query.Set("executionId", roseFindingsListExecutionID)
 	}
 
 	apiResp, err := roseGet(cmd.Context(), f, "/rose/findings", query)

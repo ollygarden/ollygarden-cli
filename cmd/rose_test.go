@@ -16,6 +16,8 @@ func setupRoseServer(t *testing.T, handler http.HandlerFunc) {
 	t.Helper()
 	oldFindingsSeverity := roseFindingsListSeverity
 	oldFindingsCategory := roseFindingsListCategory
+	oldFindingsStatus := roseFindingsListStatus
+	oldFindingsExecutionID := roseFindingsListExecutionID
 	oldFindingsPage := roseFindingsListPage
 	oldFindingsLimit := roseFindingsListLimit
 	oldFindingsDismissed := roseFindingsListDismissed
@@ -28,6 +30,8 @@ func setupRoseServer(t *testing.T, handler http.HandlerFunc) {
 	t.Cleanup(func() {
 		roseFindingsListSeverity = oldFindingsSeverity
 		roseFindingsListCategory = oldFindingsCategory
+		roseFindingsListStatus = oldFindingsStatus
+		roseFindingsListExecutionID = oldFindingsExecutionID
 		roseFindingsListPage = oldFindingsPage
 		roseFindingsListLimit = oldFindingsLimit
 		roseFindingsListDismissed = oldFindingsDismissed
