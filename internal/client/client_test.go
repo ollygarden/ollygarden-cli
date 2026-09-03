@@ -121,6 +121,24 @@ func TestPostSendsJSON(t *testing.T) {
 	resp.Body.Close()
 }
 
+func TestPatchSendsJSON(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPatch, r.Method)
+		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+		var body map[string]bool
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		assert.Equal(t, map[string]bool{"is_active": true}, body)
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(APIResponse{Data: json.RawMessage(`{}`)})
+	}))
+	defer srv.Close()
+
+	c := New(srv.URL, "key")
+	resp, err := c.Patch(context.Background(), "/rose/repositories/repo", map[string]bool{"is_active": true})
+	require.NoError(t, err)
+	resp.Body.Close()
+}
+
 func TestUserAgentSet(t *testing.T) {
 	SetVersion("1.0.0")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

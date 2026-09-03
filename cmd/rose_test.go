@@ -32,6 +32,7 @@ func setupRoseServer(t *testing.T, handler http.HandlerFunc) {
 	oldExecutionFindingsDismissed := roseExecutionsFindingsDismissed
 	oldExecutionFindingsPage := roseExecutionsFindingsPage
 	oldExecutionFindingsLimit := roseExecutionsFindingsLimit
+	oldDismissReason := roseFindingsDismissReason
 	setupAPIServer(t, handler)
 	t.Cleanup(func() {
 		roseFindingsListSeverity = oldFindingsSeverity
@@ -52,6 +53,8 @@ func setupRoseServer(t *testing.T, handler http.HandlerFunc) {
 		roseExecutionsFindingsDismissed = oldExecutionFindingsDismissed
 		roseExecutionsFindingsPage = oldExecutionFindingsPage
 		roseExecutionsFindingsLimit = oldExecutionFindingsLimit
+		roseFindingsDismissReason = oldDismissReason
+		roseFindingsDismissCmd.Flags().Lookup("reason").Changed = false
 	})
 }
 
