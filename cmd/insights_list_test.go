@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/ollygarden/ollygarden-cli/internal/client"
@@ -16,6 +17,7 @@ func setupInsightsListServer(t *testing.T, handler http.HandlerFunc) {
 	oldOffset := insightsListOffset
 	oldServiceID := insightsListServiceID
 	oldStatus := insightsListStatus
+	oldInsightType := insightsListInsightType
 	oldSignalType := insightsListSignalType
 	oldImpact := insightsListImpact
 	oldDateFrom := insightsListDateFrom
@@ -27,6 +29,7 @@ func setupInsightsListServer(t *testing.T, handler http.HandlerFunc) {
 		insightsListOffset = oldOffset
 		insightsListServiceID = oldServiceID
 		insightsListStatus = oldStatus
+		insightsListInsightType = oldInsightType
 		insightsListSignalType = oldSignalType
 		insightsListImpact = oldImpact
 		insightsListDateFrom = oldDateFrom
@@ -113,6 +116,7 @@ func TestInsightsListFilterFlags(t *testing.T) {
 		q := r.URL.Query()
 		assert.Equal(t, "svc-123", q.Get("service_id"))
 		assert.Equal(t, "active,muted", q.Get("status"))
+		assert.Equal(t, "duplicate-log-records,missing-service-name", q.Get("insight_type"))
 		assert.Equal(t, "trace", q.Get("signal_type"))
 		assert.Equal(t, "Critical,Important", q.Get("impact"))
 		assert.Equal(t, "2026-01-01T00:00:00Z", q.Get("date_from"))
@@ -125,6 +129,7 @@ func TestInsightsListFilterFlags(t *testing.T) {
 	_, _, err := executeCommand("insights", "list",
 		"--service-id", "svc-123",
 		"--status", "active,muted",
+		"--insight-type", "duplicate-log-records,missing-service-name",
 		"--signal-type", "trace",
 		"--impact", "Critical,Important",
 		"--date-from", "2026-01-01T00:00:00Z",
@@ -173,6 +178,33 @@ func TestInsightsListInvalidOffset(t *testing.T) {
 	assert.Contains(t, err.Error(), "--offset")
 }
 
+func TestInsightsListInvalidFiltersBeforeRequest(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		message string
+	}{
+		{"status", []string{"--status", "active,bad"}, "--status"},
+		{"empty insight type", []string{"--insight-type", "one,,two"}, "each --insight-type"},
+		{"long insight type", []string{"--insight-type", strings.Repeat("x", 129)}, "each --insight-type"},
+		{"too many insight types", []string{"--insight-type", strings.Repeat("x,", 100) + "x"}, "between 1 and 100"},
+		{"signal type", []string{"--signal-type", "span"}, "--signal-type"},
+		{"impact", []string{"--impact", "critical"}, "--impact"},
+		{"date from", []string{"--date-from", "yesterday"}, "--date-from"},
+		{"date order", []string{"--date-from", "2026-02-02T00:00:00Z", "--date-to", "2026-02-01T00:00:00Z"}, "must not be after"},
+		{"sort", []string{"--sort", "name"}, "--sort"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) { t.Error("no request expected") })
+			args := append([]string{"insights", "list"}, tt.args...)
+			_, _, err := executeCommand(args...)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.message)
+		})
+	}
+}
+
 func TestInsightsList401(t *testing.T) {
 	body := `{"error":{"code":"INVALID_API_KEY","message":"Invalid API key"},"meta":{"trace_id":"t1"}}`
 	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
@@ -211,6 +243,7 @@ func TestInsightsListHelp(t *testing.T) {
 	assert.Contains(t, out, "--offset")
 	assert.Contains(t, out, "--service-id")
 	assert.Contains(t, out, "--status")
+	assert.Contains(t, out, "--insight-type")
 	assert.Contains(t, out, "--signal-type")
 	assert.Contains(t, out, "--impact")
 	assert.Contains(t, out, "--date-from")

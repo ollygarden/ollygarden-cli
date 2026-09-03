@@ -15,11 +15,31 @@ func setupServicesGroupedServer(t *testing.T, handler http.HandlerFunc) {
 	oldLimit := servicesGroupedLimit
 	oldOffset := servicesGroupedOffset
 	oldSort := servicesGroupedSort
+	oldQuery := servicesGroupedQuery
+	oldView := servicesGroupedView
+	oldEnvironment := servicesGroupedEnvironment
+	oldMinScore := servicesGroupedMinScore
+	oldMaxScore := servicesGroupedMaxScore
+	oldHasInsightType := servicesGroupedHasInsightType
+	oldOrder := servicesGroupedOrder
+	for _, name := range []string{"sort", "min-score", "max-score"} {
+		servicesGroupedCmd.Flags().Lookup(name).Changed = false
+	}
 	setupAPIServer(t, handler)
 	t.Cleanup(func() {
 		servicesGroupedLimit = oldLimit
 		servicesGroupedOffset = oldOffset
 		servicesGroupedSort = oldSort
+		servicesGroupedQuery = oldQuery
+		servicesGroupedView = oldView
+		servicesGroupedEnvironment = oldEnvironment
+		servicesGroupedMinScore = oldMinScore
+		servicesGroupedMaxScore = oldMaxScore
+		servicesGroupedHasInsightType = oldHasInsightType
+		servicesGroupedOrder = oldOrder
+		for _, name := range []string{"sort", "min-score", "max-score"} {
+			servicesGroupedCmd.Flags().Lookup(name).Changed = false
+		}
 	})
 }
 
@@ -154,6 +174,53 @@ func TestServicesGroupedSortFlag(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestServicesGroupedServiceIdentityFilters(t *testing.T) {
+	body := groupedListResponse(`{"id":"aaa-111","name":"api-gateway","namespace":"default","environments":["production","staging"],"insights_count":5,"instrumentation_score":{"score":85},"last_seen_at":"2026-09-03T10:00:00Z"}`, 1, false)
+	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		assert.Equal(t, "gateway & api", q.Get("q"))
+		assert.Equal(t, "service", q.Get("view"))
+		assert.Equal(t, "production", q.Get("environment"))
+		assert.Equal(t, "40", q.Get("min_score"))
+		assert.Equal(t, "90", q.Get("max_score"))
+		assert.Equal(t, "missing-service-name", q.Get("has_insight_type"))
+		assert.Equal(t, "score", q.Get("sort"))
+		assert.Equal(t, "desc", q.Get("order"))
+		w.Write([]byte(body))
+	})
+	out, _, err := executeCommand("services", "grouped", "--query", "gateway & api", "--view", "service", "--environment", "production", "--min-score", "40", "--max-score", "90", "--has-insight-type", "missing-service-name", "--sort", "score", "--order", "desc")
+	require.NoError(t, err)
+	assert.Contains(t, out, "ENVIRONMENTS")
+	assert.Contains(t, out, "production, staging")
+	assert.Contains(t, out, "2026-09-03T10:00:00Z")
+}
+
+func TestServicesGroupedInvalidIdentityFlagsBeforeRequest(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		message string
+	}{
+		{"view", []string{"--view", "legacy"}, "--view"},
+		{"minimum low", []string{"--view", "service", "--min-score", "-2"}, "--min-score"},
+		{"maximum high", []string{"--view", "service", "--max-score", "101"}, "--max-score"},
+		{"score order", []string{"--view", "service", "--min-score", "80", "--max-score", "20"}, "must not exceed"},
+		{"order enum", []string{"--view", "service", "--order", "sideways"}, "--order"},
+		{"identity filter without view", []string{"--environment", "production"}, "--view service"},
+		{"identity sort without view", []string{"--sort", "score"}, "--view service"},
+		{"legacy sort with view", []string{"--view", "service", "--sort", "name-asc"}, "requires --sort"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) { t.Error("no request expected") })
+			args := append([]string{"services", "grouped"}, tt.args...)
+			_, _, err := executeCommand(args...)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.message)
+		})
+	}
+}
+
 func TestServicesGroupedInvalidLimit(t *testing.T) {
 	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("should not reach server with invalid limit")
@@ -221,4 +288,8 @@ func TestServicesGroupedHelp(t *testing.T) {
 	assert.Contains(t, out, "--limit")
 	assert.Contains(t, out, "--offset")
 	assert.Contains(t, out, "--sort")
+	assert.Contains(t, out, "--query")
+	assert.Contains(t, out, "--view")
+	assert.Contains(t, out, "--min-score")
+	assert.Contains(t, out, "--has-insight-type")
 }

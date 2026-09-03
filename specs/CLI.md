@@ -180,9 +180,21 @@ ollygarden services grouped [flags]
 |---|---|---|---|---|
 | `--limit` | int | 50 | no | Max groups (1-100) |
 | `--offset` | int | 0 | no | Pagination offset |
-| `--sort` | string | `insights-first` | no | `insights-first`, `name-asc`, `name-desc`, `created-asc`, `created-desc` |
+| `--sort` | string | `insights-first` | no | Legacy: `insights-first`, `name-asc`, `name-desc`, `created-asc`, `created-desc`; service view: `score`, `name`, `insight_count`, `last_seen` |
+| `--query` | string | | no | Filter service names (`q` in the API) |
+| `--view` | string | | no | Opt into the `service` identity view |
+| `--environment` | string | | no | Service view: restrict facts to one environment |
+| `--min-score` | int | | no | Service view: minimum instrumentation score (0-100) |
+| `--max-score` | int | | no | Service view: maximum instrumentation score (0-100) |
+| `--has-insight-type` | string | | no | Service view: require an active insight of this exact type |
+| `--order` | string | | no | Service view sort direction: `asc`, `desc` |
 
-| API | `GET /api/v1/services/grouped?limit=&offset=&sort=` |
+The service-identity filters, `--order`, and expanded sort fields (`score`,
+`name`, `insight_count`, `last_seen`) require `--view service`. Legacy sort
+fields cannot be combined with an explicitly selected service view. Minimum
+score cannot exceed maximum score.
+
+| API | `GET /api/v1/services/grouped?q=&view=&environment=&min_score=&max_score=&has_insight_type=&order=&limit=&offset=&sort=` |
 |---|---|
 
 ---
@@ -272,13 +284,14 @@ ollygarden insights list [flags]
 | `--offset` | int | 0 | no | Pagination offset |
 | `--service-id` | UUID | | no | Filter by service |
 | `--status` | string | | no | Comma-separated: `active`, `archived`, `muted` |
+| `--insight-type` | string | | no | 1-100 comma-separated exact insight type names (each 1-128 characters) |
 | `--signal-type` | string | | no | `trace`, `metric`, `log` |
 | `--impact` | string | | no | Comma-separated: `Critical`, `Important`, `Normal`, `Low` |
 | `--date-from` | RFC3339 | | no | Filter created_at >= |
 | `--date-to` | RFC3339 | | no | Filter created_at <= |
 | `--sort` | string | `-detected_ts` | no | Prefix `+`/`-` for ASC/DESC. Fields: `detected_ts`, `created_at`, `updated_at`, `impact`, `signal_type` |
 
-| API | `GET /api/v1/insights?limit=&offset=&service_id=&status=&signal_type=&impact=&date_from=&date_to=&sort=` |
+| API | `GET /api/v1/insights?limit=&offset=&service_id=&status=&insight_type=&signal_type=&impact=&date_from=&date_to=&sort=` |
 |---|---|
 
 ---
@@ -513,16 +526,15 @@ ollygarden rose findings list [flags]
 |---|---|---|---|---|
 | `--severity` | string | | no | Comma-separated: `critical`, `high`, `medium`, `low`, `suggestion` |
 | `--category` | string | | no | Comma-separated, e.g. `"Sensitive Data,Volume"` |
-| `--status` | string | `active` | no | `active`, `resolved`, `all` |
-| `--execution-id` | UUID | | no | Only findings produced by this execution |
 | `--page` | int | 1 | no | Page number (≥1) |
 | `--limit` | int | 50 | no | Results per page (1-100), sent as `page_size` |
+| `--dismissed` | string | `false` | no | `false`, `true`, `all` |
 
 The upstream endpoint paginates with `page`/`page_size` (there is no offset),
 so this command exposes `--page` instead of `--offset`. The human-mode hint is
 `# N more results. Use --page X to see next page.`
 
-| API | `GET /api/v1/rose/findings?page=&page_size=&status=&severity=&category=&executionId=` |
+| API | `GET /api/v1/rose/findings?page=&page_size=&severity=&category=&dismissed=` |
 |---|---|
 
 ---
@@ -819,7 +831,7 @@ ollygarden services search payment --environment production --json
 ollygarden services get 550e8400-e29b-41d4-a716-446655440000 --json | jq '.data.instrumentation_score.score'
 
 # 5. List critical active insights from the last 7 days
-ollygarden insights list --status active --impact Critical --date-from 2026-02-12T00:00:00Z --sort -detected_ts
+ollygarden insights list --status active --insight-type missing-service-name --impact Critical --date-from 2026-02-12T00:00:00Z --sort -detected_ts
 
 # 6. Get insight details and extract remediation instructions
 ollygarden insights get a1b2c3d4-5678-90ab-cdef-111111111111 --json | jq '.data.insight_type.remediation_instructions'
@@ -845,9 +857,12 @@ ollygarden webhooks deliveries list <id> --limit 5
 # 10. List all services grouped, sorted by name, extract names with jq
 ollygarden services grouped --sort name-asc --json | jq '.data[].name'
 
+# 10b. Find low-scoring production service identities with active insights
+ollygarden services grouped --view service --environment production --max-score 50 --has-insight-type missing-service-name --sort score --order asc
+
 # 11. Rose: findings overview, then drill into the critical ones
 ollygarden rose findings summary
-ollygarden rose findings list --severity critical,high
+ollygarden rose findings list --severity critical,high --dismissed false
 
 # 12. Rose: full detail for one finding (repository ID from the list output)
 ollygarden rose findings get ddca7297-a16f-4ac4-bd31-d20c90f3cdaa otel-6576685e6e1f
