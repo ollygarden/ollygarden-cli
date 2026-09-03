@@ -139,6 +139,8 @@ ollygarden insights list --status active       # active insights
 ollygarden insights list --insight-type missing-service-name
 ollygarden services grouped --view service --max-score 50 --sort score
 ollygarden rose findings list --dismissed all  # include dismissed findings
+ollygarden rose executions findings <execution-id> # canonical per-run findings
+ollygarden rose executions agent-events <execution-id> --after-seq 42 # poll newer events
 ollygarden insights summary <insight-id>       # AI-generated summary
 ollygarden analytics services                  # per-service analytics
 ollygarden update                              # install a newer stable CLI release
