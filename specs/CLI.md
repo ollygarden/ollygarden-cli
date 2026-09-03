@@ -180,22 +180,28 @@ ollygarden services grouped [flags]
 |---|---|---|---|---|
 | `--limit` | int | 50 | no | Max groups (1-100) |
 | `--offset` | int | 0 | no | Pagination offset |
-| `--sort` | string | `insights-first` | no | Legacy: `insights-first`, `name-asc`, `name-desc`, `created-asc`, `created-desc`; service view: `score`, `name`, `insight_count`, `last_seen` |
+| `--sort` | string | `insights-first` (`score` with `--view service`) | no | Legacy: `insights-first`, `name-asc`, `name-desc`, `created-asc`, `created-desc`; service view: `score`, `name`, `insight_count`, `last_seen` |
 | `--query` | string | | no | Filter service names (`q` in the API) |
-| `--view` | string | | no | Opt into the `service` identity view |
+| `--view` | string | | no | `service` for one row per service identity; automatically starts snapshot pagination |
 | `--environment` | string | | no | Service view: restrict facts to one environment |
 | `--min-score` | int | | no | Service view: minimum instrumentation score (0-100) |
 | `--max-score` | int | | no | Service view: maximum instrumentation score (0-100) |
 | `--has-insight-type` | string | | no | Service view: require an active insight of this exact type |
 | `--order` | string | | no | Service view sort direction: `asc`, `desc` |
+| `--snapshot` | bool | false | no | Start a mutation-stable snapshot (requires `--view service`) |
+| `--cursor` | string | | no | Continue a snapshot with Olive's opaque cursor (requires `--view service` and the same filters/sort) |
+| `--all` | bool | false | no | Read every page from one snapshot in human or quiet mode (requires `--view service`) |
+| `--max-pages` | int | 0 | no | With `--all`, stop after N pages and release the unfinished snapshot; 0 means unlimited |
 
 The service-identity filters, `--order`, and expanded sort fields (`score`,
 `name`, `insight_count`, `last_seen`) require `--view service`. Legacy sort
 fields cannot be combined with an explicitly selected service view. Minimum
 score cannot exceed maximum score.
 
-| API | `GET /api/v1/services/grouped?q=&view=&environment=&min_score=&max_score=&has_insight_type=&order=&limit=&offset=&sort=` |
+| API | `GET /api/v1/services/grouped?q=&view=&environment=&min_score=&max_score=&has_insight_type=&order=&limit=&offset=&sort=&snapshot=&cursor=`; bounded scans release with `DELETE /api/v1/services/grouped/snapshot` |
 |---|---|
+
+Snapshot pagination cannot be combined with a non-zero `--offset`. JSON mode returns one untouched API envelope so `meta.next_cursor` and `meta.snapshot_expires_at` remain available; continue by passing the cursor and the same query state. `--all` owns traversal and cleanup and therefore cannot be combined with `--json`. If `--max-pages` stops early, traversal fails after a page, or the process receives SIGINT/SIGTERM after a page, the CLI idempotently releases the unfinished snapshot. HTTP 410 means the cursor is invalid or expired: restart without a cursor or non-zero offset. HTTP 503 means snapshot capacity is temporarily exhausted; retry shortly or narrow the query.
 
 ---
 
@@ -290,9 +296,15 @@ ollygarden insights list [flags]
 | `--date-from` | RFC3339 | | no | Filter created_at >= |
 | `--date-to` | RFC3339 | | no | Filter created_at <= |
 | `--sort` | string | `-detected_ts` | no | Prefix `+`/`-` for ASC/DESC. Fields: `detected_ts`, `created_at`, `updated_at`, `impact`, `signal_type` |
+| `--snapshot` | bool | false | no | Start a mutation-stable snapshot |
+| `--cursor` | string | | no | Continue with Olive's opaque cursor and the same filters/sort |
+| `--all` | bool | false | no | Read every page from one snapshot in human or quiet mode |
+| `--max-pages` | int | 0 | no | With `--all`, stop after N pages and release the unfinished snapshot; 0 means unlimited |
 
-| API | `GET /api/v1/insights?limit=&offset=&service_id=&status=&insight_type=&signal_type=&impact=&date_from=&date_to=&sort=` |
+| API | `GET /api/v1/insights?limit=&offset=&service_id=&status=&insight_type=&signal_type=&impact=&date_from=&date_to=&sort=&snapshot=&cursor=`; bounded scans release with `DELETE /api/v1/insights/snapshot` |
 |---|---|
+
+Snapshot pagination cannot be combined with a non-zero `--offset`. JSON mode returns one untouched API envelope so `meta.next_cursor` and `meta.snapshot_expires_at` remain available; continue by passing the cursor and the same filters/sort. `--all` owns traversal and cleanup and therefore cannot be combined with `--json`. If `--max-pages` stops early, traversal fails after a page, or the process receives SIGINT/SIGTERM after a page, the CLI idempotently releases the unfinished snapshot. HTTP 410 means the cursor is invalid or expired: restart with `--snapshot`, no cursor, and no non-zero offset. HTTP 503 means snapshot capacity is temporarily exhausted; retry shortly or narrow the query.
 
 ---
 

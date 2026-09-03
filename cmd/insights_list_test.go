@@ -23,6 +23,7 @@ func setupInsightsListServer(t *testing.T, handler http.HandlerFunc) {
 	oldDateFrom := insightsListDateFrom
 	oldDateTo := insightsListDateTo
 	oldSort := insightsListSort
+	oldSnapshot := insightsListSnapshot
 	setupAPIServer(t, handler)
 	t.Cleanup(func() {
 		insightsListLimit = oldLimit
@@ -35,6 +36,7 @@ func setupInsightsListServer(t *testing.T, handler http.HandlerFunc) {
 		insightsListDateFrom = oldDateFrom
 		insightsListDateTo = oldDateTo
 		insightsListSort = oldSort
+		insightsListSnapshot = oldSnapshot
 	})
 }
 
@@ -92,6 +94,86 @@ func TestInsightsListJSON(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(out), &envelope))
 	assert.Equal(t, "tr1", envelope.Meta.TraceID)
 	assert.Contains(t, string(envelope.Data), "High Error Rate")
+}
+
+func TestInsightsListSnapshotJSONPreservesCursorMetadata(t *testing.T) {
+	body := `{"data":[],"meta":{"trace_id":"tr1","has_more":true,"next_cursor":"opaque.next","snapshot_expires_at":"2026-09-03T12:15:00Z"}}`
+	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "true", r.URL.Query().Get("snapshot"))
+		w.Write([]byte(body))
+	})
+	out, _, err := executeCommand("insights", "list", "--snapshot", "--json")
+	require.NoError(t, err)
+	assert.JSONEq(t, body, out)
+}
+
+func TestInsightsListCursorContinuation(t *testing.T) {
+	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "opaque.next", r.URL.Query().Get("cursor"))
+		assert.Empty(t, r.URL.Query().Get("snapshot"))
+		w.Write([]byte(orgInsightsListResponse("", 0, false)))
+	})
+	_, _, err := executeCommand("insights", "list", "--cursor", "opaque.next")
+	require.NoError(t, err)
+}
+
+func TestInsightsListAllCompletesSnapshot(t *testing.T) {
+	requests := 0
+	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		assert.Equal(t, http.MethodGet, r.Method)
+		cursor := "opaque.next"
+		if requests == 2 {
+			assert.Equal(t, cursor, r.URL.Query().Get("cursor"))
+			cursor = ""
+		}
+		w.Write([]byte(`{"data":[],"meta":{"next_cursor":"` + cursor + `"}}`))
+	})
+	_, _, err := executeCommand("insights", "list", "--all")
+	require.NoError(t, err)
+	assert.Equal(t, 2, requests)
+}
+
+func TestInsightsListAllBoundedReleasesSnapshot(t *testing.T) {
+	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			assert.Equal(t, "/api/v1/insights/snapshot", r.URL.Path)
+			assert.Equal(t, "opaque.next", r.URL.Query().Get("cursor"))
+			assert.Empty(t, r.URL.Query().Get("limit"))
+			w.Write([]byte(`{"data":{"released":true},"meta":{}}`))
+			return
+		}
+		w.Write([]byte(`{"data":[],"meta":{"next_cursor":"opaque.next"}}`))
+	})
+	_, _, err := executeCommand("insights", "list", "--all", "--max-pages", "1")
+	require.NoError(t, err)
+}
+
+func TestInsightsListSnapshotErrors(t *testing.T) {
+	for _, tt := range []struct {
+		status       int
+		code, detail string
+	}{{410, "SNAPSHOT_EXPIRED", "Start a new request with snapshot=true"}, {503, "SNAPSHOT_CAPACITY", "Retry shortly"}} {
+		t.Run(itoa(tt.status), func(t *testing.T) {
+			setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tt.status)
+				key := "retry"
+				if tt.status == 410 {
+					key = "restart"
+				}
+				w.Write([]byte(`{"error":{"code":"` + tt.code + `","message":"snapshot failure","details":{"` + key + `":"` + tt.detail + `"}},"meta":{"trace_id":"trace-snapshot"}}`))
+			})
+			_, stderr, err := executeCommand("insights", "list", "--snapshot")
+			require.Error(t, err)
+			assert.Contains(t, stderr, tt.detail)
+		})
+	}
+}
+
+func TestInsightsListCursorOffsetRejectedBeforeRequest(t *testing.T) {
+	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) { t.Fatal("unexpected request") })
+	_, _, err := executeCommand("insights", "list", "--cursor", "opaque", "--offset", "1")
+	require.ErrorContains(t, err, "cannot be combined")
 }
 
 func TestInsightsListQuiet(t *testing.T) {

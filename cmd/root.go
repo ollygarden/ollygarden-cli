@@ -1,11 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/ollygarden/ollygarden-cli/internal/auth"
 	"github.com/ollygarden/ollygarden-cli/internal/client"
@@ -140,7 +143,9 @@ func NewClient() *client.Client {
 
 // Execute runs the root command and exits with the appropriate code.
 func Execute() {
-	os.Exit(handleRootErr(rootCmd.Execute(), os.Stderr))
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	os.Exit(handleRootErr(rootCmd.ExecuteContext(ctx), os.Stderr))
 }
 
 // handleRootErr maps a command error to an exit code and writes any

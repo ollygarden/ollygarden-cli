@@ -18,6 +18,11 @@ func (e *APIError) Error() string {
 		if e.ErrorResponse.Meta.TraceID != "" {
 			msg += fmt.Sprintf(" (trace_id: %s)", e.ErrorResponse.Meta.TraceID)
 		}
+		if restart := e.ErrorResponse.Error.Details["restart"]; restart != "" {
+			msg += ". " + restart
+		} else if retry := e.ErrorResponse.Error.Details["retry"]; retry != "" {
+			msg += ". " + retry
+		}
 		return msg
 	}
 	return fmt.Sprintf("Error: HTTP %d", e.StatusCode)

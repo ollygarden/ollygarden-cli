@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/ollygarden/ollygarden-cli/internal/client"
@@ -22,7 +23,8 @@ func setupServicesGroupedServer(t *testing.T, handler http.HandlerFunc) {
 	oldMaxScore := servicesGroupedMaxScore
 	oldHasInsightType := servicesGroupedHasInsightType
 	oldOrder := servicesGroupedOrder
-	for _, name := range []string{"sort", "min-score", "max-score"} {
+	oldSnapshot := servicesGroupedSnapshot
+	for _, name := range []string{"sort", "query", "view", "environment", "min-score", "max-score", "has-insight-type", "order", "snapshot", "cursor", "all", "max-pages"} {
 		servicesGroupedCmd.Flags().Lookup(name).Changed = false
 	}
 	setupAPIServer(t, handler)
@@ -37,7 +39,8 @@ func setupServicesGroupedServer(t *testing.T, handler http.HandlerFunc) {
 		servicesGroupedMaxScore = oldMaxScore
 		servicesGroupedHasInsightType = oldHasInsightType
 		servicesGroupedOrder = oldOrder
-		for _, name := range []string{"sort", "min-score", "max-score"} {
+		servicesGroupedSnapshot = oldSnapshot
+		for _, name := range []string{"sort", "query", "view", "environment", "min-score", "max-score", "has-insight-type", "order", "snapshot", "cursor", "all", "max-pages"} {
 			servicesGroupedCmd.Flags().Lookup(name).Changed = false
 		}
 	})
@@ -99,6 +102,18 @@ func TestServicesGroupedJSON(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(out), &envelope))
 	assert.Equal(t, "tr1", envelope.Meta.TraceID)
 	assert.Contains(t, string(envelope.Data), "api-gateway")
+}
+
+func TestServicesGroupedServiceViewStartsSnapshot(t *testing.T) {
+	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "service", r.URL.Query().Get("view"))
+		assert.Equal(t, "true", r.URL.Query().Get("snapshot"))
+		assert.Equal(t, "score", r.URL.Query().Get("sort"))
+		w.Write([]byte(`{"data":[],"meta":{"next_cursor":"opaque","snapshot_expires_at":"2026-09-03T12:15:00Z"}}`))
+	})
+	out, _, err := executeCommand("services", "grouped", "--view", "service", "--json")
+	require.NoError(t, err)
+	assert.Contains(t, out, `"next_cursor":"opaque"`)
 }
 
 func TestServicesGroupedQuiet(t *testing.T) {
@@ -186,6 +201,7 @@ func TestServicesGroupedServiceIdentityFilters(t *testing.T) {
 		assert.Equal(t, "missing-service-name", q.Get("has_insight_type"))
 		assert.Equal(t, "score", q.Get("sort"))
 		assert.Equal(t, "desc", q.Get("order"))
+		assert.Equal(t, "true", q.Get("snapshot"))
 		w.Write([]byte(body))
 	})
 	out, _, err := executeCommand("services", "grouped", "--query", "gateway & api", "--view", "service", "--environment", "production", "--min-score", "40", "--max-score", "90", "--has-insight-type", "missing-service-name", "--sort", "score", "--order", "desc")
@@ -206,6 +222,9 @@ func TestServicesGroupedInvalidIdentityFlagsBeforeRequest(t *testing.T) {
 		{"maximum high", []string{"--view", "service", "--max-score", "101"}, "--max-score"},
 		{"score order", []string{"--view", "service", "--min-score", "80", "--max-score", "20"}, "must not exceed"},
 		{"order enum", []string{"--view", "service", "--order", "sideways"}, "--order"},
+		{"empty query", []string{"--query", "   "}, "--query"},
+		{"long environment", []string{"--view", "service", "--environment", strings.Repeat("x", 129)}, "--environment"},
+		{"empty insight type", []string{"--view", "service", "--has-insight-type", ""}, "--has-insight-type"},
 		{"identity filter without view", []string{"--environment", "production"}, "--view service"},
 		{"identity sort without view", []string{"--sort", "score"}, "--view service"},
 		{"legacy sort with view", []string{"--view", "service", "--sort", "name-asc"}, "requires --sort"},
