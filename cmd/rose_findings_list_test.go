@@ -28,6 +28,7 @@ func TestRoseFindingsListHuman(t *testing.T) {
 		assert.Equal(t, "1", q.Get("page"))
 		assert.Equal(t, "50", q.Get("page_size"))
 		assert.Equal(t, "active", q.Get("status"))
+		assert.Equal(t, "false", q.Get("dismissed"))
 		assert.Empty(t, q.Get("severity"))
 		w.Write([]byte(roseFindingsListResponse(false)))
 	})
@@ -50,6 +51,7 @@ func TestRoseFindingsListFilters(t *testing.T) {
 		assert.Equal(t, "Sensitive Data", q.Get("category"))
 		assert.Equal(t, "all", q.Get("status"))
 		assert.Equal(t, roseTestExecutionID, q.Get("executionId"))
+		assert.Equal(t, "all", q.Get("dismissed"))
 		assert.Equal(t, "2", q.Get("page"))
 		assert.Equal(t, "10", q.Get("page_size"))
 		w.Write([]byte(roseFindingsListResponse(false)))
@@ -57,7 +59,8 @@ func TestRoseFindingsListFilters(t *testing.T) {
 
 	_, _, err := executeCommand("rose", "findings", "list",
 		"--severity", "critical,high", "--category", "Sensitive Data",
-		"--status", "all", "--execution-id", roseTestExecutionID, "--page", "2", "--limit", "10")
+		"--status", "all", "--execution-id", roseTestExecutionID,
+		"--dismissed", "all", "--page", "2", "--limit", "10")
 	require.NoError(t, err)
 }
 
@@ -107,6 +110,7 @@ func TestRoseFindingsListBadFlags(t *testing.T) {
 		{"invalid severity", []string{"--severity", "bogus"}, "--severity must contain only: critical, high, medium, low, suggestion"},
 		{"mixed invalid severity", []string{"--severity", "critical,bogus"}, "--severity must contain only: critical, high, medium, low, suggestion"},
 		{"invalid execution ID", []string{"--execution-id", "not-a-uuid"}, "--execution-id must be a UUID"},
+		{"invalid dismissed", []string{"--dismissed", "yes"}, "--dismissed must be one of: false, true, all"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -141,4 +145,11 @@ func TestRoseFindingsListBadFlagsJSON(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(stderr), &envelope))
 	assert.Equal(t, "INVALID_PARAMETERS", envelope.Error.Code)
 	assert.Equal(t, "--limit must be between 1 and 100", envelope.Error.Message)
+}
+
+func TestRoseFindingsListHelp(t *testing.T) {
+	out, _, err := executeCommand("rose", "findings", "list", "--help")
+	require.NoError(t, err)
+	assert.Contains(t, out, "--dismissed")
+	assert.Contains(t, out, "false, true, all")
 }

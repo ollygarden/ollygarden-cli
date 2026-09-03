@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
+	"time"
+	"unicode/utf8"
 
 	"github.com/ollygarden/ollygarden-cli/internal/client"
 	"github.com/ollygarden/ollygarden-cli/internal/output"
@@ -12,16 +15,17 @@ import (
 )
 
 var (
-	insightsListLimit      int
-	insightsListOffset     int
-	insightsListServiceID  string
-	insightsListStatus     string
-	insightsListSignalType string
-	insightsListImpact     string
-	insightsListDateFrom   string
-	insightsListDateTo     string
-	insightsListSort       string
-	insightsListSnapshot   snapshotFlags
+	insightsListLimit       int
+	insightsListOffset      int
+	insightsListServiceID   string
+	insightsListStatus      string
+	insightsListInsightType string
+	insightsListSignalType  string
+	insightsListImpact      string
+	insightsListDateFrom    string
+	insightsListDateTo      string
+	insightsListSort        string
+	insightsListSnapshot    snapshotFlags
 )
 
 type insightsListItem struct {
@@ -45,6 +49,7 @@ func init() {
 	insightsListCmd.Flags().IntVar(&insightsListOffset, "offset", 0, "Number of results to skip (≥0)")
 	insightsListCmd.Flags().StringVar(&insightsListServiceID, "service-id", "", "Filter by service ID")
 	insightsListCmd.Flags().StringVar(&insightsListStatus, "status", "", "Filter by status (comma-separated: active, archived, muted)")
+	insightsListCmd.Flags().StringVar(&insightsListInsightType, "insight-type", "", "Filter by exact insight type names (comma-separated, 1-100 values, each 1-128 characters)")
 	insightsListCmd.Flags().StringVar(&insightsListSignalType, "signal-type", "", "Filter by signal type (trace, metric, log)")
 	insightsListCmd.Flags().StringVar(&insightsListImpact, "impact", "", "Filter by impact (comma-separated: Critical, Important, Normal, Low)")
 	insightsListCmd.Flags().StringVar(&insightsListDateFrom, "date-from", "", "Filter from date (RFC3339)")
@@ -63,6 +68,9 @@ func runInsightsList(cmd *cobra.Command, args []string) error {
 	if insightsListOffset < 0 {
 		return fmt.Errorf("--offset must be >= 0")
 	}
+	if err := validateInsightsListFilters(); err != nil {
+		return err
+	}
 	if err := insightsListSnapshot.validate(insightsListOffset, jsonMode); err != nil {
 		return err
 	}
@@ -79,6 +87,9 @@ func runInsightsList(cmd *cobra.Command, args []string) error {
 	}
 	if insightsListStatus != "" {
 		query.Set("status", insightsListStatus)
+	}
+	if insightsListInsightType != "" {
+		query.Set("insight_type", insightsListInsightType)
 	}
 	if insightsListSignalType != "" {
 		query.Set("signal_type", insightsListSignalType)
@@ -173,4 +184,69 @@ func runInsightsList(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func validateInsightsListFilters() error {
+	if !csvValuesAllowed(insightsListStatus, "active", "archived", "muted") {
+		return fmt.Errorf("--status must contain only: active, archived, muted")
+	}
+	if insightsListInsightType != "" {
+		types := strings.Split(insightsListInsightType, ",")
+		if len(types) > 100 {
+			return fmt.Errorf("--insight-type must contain between 1 and 100 values")
+		}
+		for _, insightType := range types {
+			length := utf8.RuneCountInString(insightType)
+			if length < 1 || length > 128 {
+				return fmt.Errorf("each --insight-type value must be between 1 and 128 characters")
+			}
+		}
+	}
+	if !csvValuesAllowed(insightsListImpact, "Critical", "Important", "Normal", "Low") {
+		return fmt.Errorf("--impact must contain only: Critical, Important, Normal, Low")
+	}
+	if insightsListSignalType != "" && insightsListSignalType != "trace" && insightsListSignalType != "metric" && insightsListSignalType != "log" {
+		return fmt.Errorf("--signal-type must be one of: trace, metric, log")
+	}
+	for flag, value := range map[string]string{"--date-from": insightsListDateFrom, "--date-to": insightsListDateTo} {
+		if value != "" {
+			if _, err := time.Parse(time.RFC3339, value); err != nil {
+				return fmt.Errorf("%s must be RFC3339", flag)
+			}
+		}
+	}
+	if insightsListDateFrom != "" && insightsListDateTo != "" {
+		from, _ := time.Parse(time.RFC3339, insightsListDateFrom)
+		to, _ := time.Parse(time.RFC3339, insightsListDateTo)
+		if from.After(to) {
+			return fmt.Errorf("--date-from must not be after --date-to")
+		}
+	}
+	sortField := insightsListSort
+	if strings.HasPrefix(sortField, "+") || strings.HasPrefix(sortField, "-") {
+		sortField = sortField[1:]
+	}
+	if insightsListSort == "" || !csvValuesAllowed(sortField, "created_at", "detected_ts", "updated_at", "impact", "signal_type") {
+		return fmt.Errorf("--sort must use an optional +/- prefix and one of: created_at, detected_ts, updated_at, impact, signal_type")
+	}
+	return nil
+}
+
+func csvValuesAllowed(value string, allowed ...string) bool {
+	if value == "" {
+		return true
+	}
+	for _, item := range strings.Split(value, ",") {
+		found := false
+		for _, candidate := range allowed {
+			if item == candidate {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }

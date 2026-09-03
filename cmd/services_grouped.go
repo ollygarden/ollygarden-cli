@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/ollygarden/ollygarden-cli/internal/client"
 	"github.com/ollygarden/ollygarden-cli/internal/output"
@@ -12,11 +13,17 @@ import (
 )
 
 var (
-	servicesGroupedLimit    int
-	servicesGroupedOffset   int
-	servicesGroupedSort     string
-	servicesGroupedView     string
-	servicesGroupedSnapshot snapshotFlags
+	servicesGroupedLimit          int
+	servicesGroupedOffset         int
+	servicesGroupedSort           string
+	servicesGroupedQuery          string
+	servicesGroupedView           string
+	servicesGroupedEnvironment    string
+	servicesGroupedMinScore       int
+	servicesGroupedMaxScore       int
+	servicesGroupedHasInsightType string
+	servicesGroupedOrder          string
+	servicesGroupedSnapshot       snapshotFlags
 )
 
 var allowedSorts = map[string]bool{
@@ -25,6 +32,10 @@ var allowedSorts = map[string]bool{
 	"name-desc":      true,
 	"created-asc":    true,
 	"created-desc":   true,
+	"score":          true,
+	"name":           true,
+	"insight_count":  true,
+	"last_seen":      true,
 }
 
 type groupedServiceItem struct {
@@ -35,6 +46,8 @@ type groupedServiceItem struct {
 	VersionCount         int                  `json:"version_count"`
 	InsightsCount        int                  `json:"insights_count"`
 	InstrumentationScore *serviceScoreCompact `json:"instrumentation_score"`
+	Environments         []string             `json:"environments"`
+	LastSeenAt           string               `json:"last_seen_at"`
 }
 
 var servicesGroupedCmd = &cobra.Command{
@@ -48,8 +61,14 @@ func init() {
 	servicesCmd.AddCommand(servicesGroupedCmd)
 	servicesGroupedCmd.Flags().IntVar(&servicesGroupedLimit, "limit", 50, "Maximum number of results (1-100)")
 	servicesGroupedCmd.Flags().IntVar(&servicesGroupedOffset, "offset", 0, "Number of results to skip (≥0)")
-	servicesGroupedCmd.Flags().StringVar(&servicesGroupedSort, "sort", "insights-first", "Sort order: insights-first, name-asc, name-desc, created-asc, created-desc")
-	servicesGroupedCmd.Flags().StringVar(&servicesGroupedView, "view", "", "Grouped view (service requires snapshot pagination)")
+	servicesGroupedCmd.Flags().StringVar(&servicesGroupedSort, "sort", "insights-first", "Sort: insights-first, name-asc, name-desc, created-asc, created-desc; service view: score, name, insight_count, last_seen")
+	servicesGroupedCmd.Flags().StringVar(&servicesGroupedQuery, "query", "", "Search service names")
+	servicesGroupedCmd.Flags().StringVar(&servicesGroupedView, "view", "", "Result view (service requires snapshot pagination)")
+	servicesGroupedCmd.Flags().StringVar(&servicesGroupedEnvironment, "environment", "", "Service view: restrict facts to one environment")
+	servicesGroupedCmd.Flags().IntVar(&servicesGroupedMinScore, "min-score", 0, "Service view: minimum instrumentation score (0-100)")
+	servicesGroupedCmd.Flags().IntVar(&servicesGroupedMaxScore, "max-score", 0, "Service view: maximum instrumentation score (0-100)")
+	servicesGroupedCmd.Flags().StringVar(&servicesGroupedHasInsightType, "has-insight-type", "", "Service view: require an active insight of this exact type")
+	servicesGroupedCmd.Flags().StringVar(&servicesGroupedOrder, "order", "", "Service view sort direction (asc, desc)")
 	servicesGroupedCmd.Flags().BoolVar(&servicesGroupedSnapshot.enabled, "snapshot", false, "Start a mutation-stable snapshot")
 	servicesGroupedCmd.Flags().StringVar(&servicesGroupedSnapshot.cursor, "cursor", "", "Continue with an opaque snapshot cursor")
 	servicesGroupedCmd.Flags().BoolVar(&servicesGroupedSnapshot.all, "all", false, "Read all pages from one mutation-stable snapshot")
@@ -63,21 +82,15 @@ func runServicesGrouped(cmd *cobra.Command, args []string) error {
 	if servicesGroupedOffset < 0 {
 		return fmt.Errorf("--offset must be >= 0")
 	}
-	if servicesGroupedView != "" && servicesGroupedView != "service" {
-		return fmt.Errorf("--view must be service")
+	effectiveSort := servicesGroupedSort
+	if servicesGroupedView == "service" && !cmd.Flags().Changed("sort") {
+		effectiveSort = "score"
+	}
+	if err := validateServicesGroupedIdentityFlags(cmd, effectiveSort); err != nil {
+		return err
 	}
 	if servicesGroupedView != "service" && (servicesGroupedSnapshot.enabled || servicesGroupedSnapshot.cursor != "" || servicesGroupedSnapshot.all) {
 		return fmt.Errorf("--snapshot, --cursor, and --all require --view service")
-	}
-	if servicesGroupedView == "service" && !cmd.Flags().Changed("sort") {
-		servicesGroupedSort = "score"
-	}
-	if servicesGroupedView == "service" {
-		if servicesGroupedSort != "score" && servicesGroupedSort != "name" && servicesGroupedSort != "insight_count" && servicesGroupedSort != "last_seen" {
-			return fmt.Errorf("--sort with --view service must be one of: score, name, insight_count, last_seen")
-		}
-	} else if !allowedSorts[servicesGroupedSort] {
-		return fmt.Errorf("--sort must be one of: insights-first, name-asc, name-desc, created-asc, created-desc")
 	}
 	if servicesGroupedView == "service" {
 		servicesGroupedSnapshot.enabled = true
@@ -92,9 +105,27 @@ func runServicesGrouped(cmd *cobra.Command, args []string) error {
 	query := url.Values{}
 	query.Set("limit", strconv.Itoa(servicesGroupedLimit))
 	query.Set("offset", strconv.Itoa(servicesGroupedOffset))
-	query.Set("sort", servicesGroupedSort)
+	query.Set("sort", effectiveSort)
+	if servicesGroupedQuery != "" {
+		query.Set("q", servicesGroupedQuery)
+	}
 	if servicesGroupedView != "" {
 		query.Set("view", servicesGroupedView)
+	}
+	if servicesGroupedEnvironment != "" {
+		query.Set("environment", servicesGroupedEnvironment)
+	}
+	if cmd.Flags().Changed("min-score") {
+		query.Set("min_score", strconv.Itoa(servicesGroupedMinScore))
+	}
+	if cmd.Flags().Changed("max-score") {
+		query.Set("max_score", strconv.Itoa(servicesGroupedMaxScore))
+	}
+	if servicesGroupedHasInsightType != "" {
+		query.Set("has_insight_type", servicesGroupedHasInsightType)
+	}
+	if servicesGroupedOrder != "" {
+		query.Set("order", servicesGroupedOrder)
 	}
 	servicesGroupedSnapshot.apply(query)
 
@@ -155,13 +186,20 @@ func runServicesGrouped(cmd *cobra.Command, args []string) error {
 	}
 
 	headers := []string{"NAME", "ENVIRONMENT", "VERSIONS", "INSIGHTS", "SCORE"}
+	if servicesGroupedView == "service" {
+		headers = []string{"NAME", "ENVIRONMENTS", "INSIGHTS", "SCORE", "LAST SEEN"}
+	}
 	rows := make([][]string, len(services))
 	for i, s := range services {
 		score := "\u2014"
 		if s.InstrumentationScore != nil {
 			score = strconv.Itoa(s.InstrumentationScore.Score)
 		}
-		rows[i] = []string{s.Name, s.Environment, strconv.Itoa(s.VersionCount), strconv.Itoa(s.InsightsCount), score}
+		if servicesGroupedView == "service" {
+			rows[i] = []string{s.Name, strings.Join(s.Environments, ", "), strconv.Itoa(s.InsightsCount), score, s.LastSeenAt}
+		} else {
+			rows[i] = []string{s.Name, s.Environment, strconv.Itoa(s.VersionCount), strconv.Itoa(s.InsightsCount), score}
+		}
 	}
 
 	f.PrintTable(headers, rows)
@@ -172,5 +210,47 @@ func runServicesGrouped(cmd *cobra.Command, args []string) error {
 		f.PrintPaginationHint(apiResp.Meta.Total, servicesGroupedOffset, servicesGroupedLimit)
 	}
 
+	return nil
+}
+
+func validateServicesGroupedIdentityFlags(cmd *cobra.Command, effectiveSort string) error {
+	if servicesGroupedView != "" && servicesGroupedView != "service" {
+		return fmt.Errorf("--view must be service")
+	}
+	if cmd.Flags().Changed("min-score") && (servicesGroupedMinScore < 0 || servicesGroupedMinScore > 100) {
+		return fmt.Errorf("--min-score must be between 0 and 100")
+	}
+	if cmd.Flags().Changed("max-score") && (servicesGroupedMaxScore < 0 || servicesGroupedMaxScore > 100) {
+		return fmt.Errorf("--max-score must be between 0 and 100")
+	}
+	if cmd.Flags().Changed("min-score") && cmd.Flags().Changed("max-score") && servicesGroupedMinScore > servicesGroupedMaxScore {
+		return fmt.Errorf("--min-score must not exceed --max-score")
+	}
+	if servicesGroupedOrder != "" && servicesGroupedOrder != "asc" && servicesGroupedOrder != "desc" {
+		return fmt.Errorf("--order must be one of: asc, desc")
+	}
+	for flag, value := range map[string]string{
+		"--query":            servicesGroupedQuery,
+		"--environment":      servicesGroupedEnvironment,
+		"--has-insight-type": servicesGroupedHasInsightType,
+	} {
+		if cmd.Flags().Changed(strings.TrimPrefix(flag, "--")) {
+			length := len([]rune(strings.TrimSpace(value)))
+			if length < 1 || length > 128 {
+				return fmt.Errorf("%s must be between 1 and 128 characters", flag)
+			}
+		}
+	}
+	identityFlag := servicesGroupedEnvironment != "" || cmd.Flags().Changed("min-score") || cmd.Flags().Changed("max-score") || servicesGroupedHasInsightType != "" || servicesGroupedOrder != ""
+	serviceSort := effectiveSort == "score" || effectiveSort == "name" || effectiveSort == "insight_count" || effectiveSort == "last_seen"
+	if (identityFlag || serviceSort) && servicesGroupedView != "service" {
+		return fmt.Errorf("--view service is required with service-identity filters, --order, or service-identity sort fields")
+	}
+	if servicesGroupedView == "service" && cmd.Flags().Changed("sort") && !serviceSort {
+		return fmt.Errorf("--view service requires --sort to be one of: score, name, insight_count, last_seen")
+	}
+	if servicesGroupedView != "service" && !allowedSorts[effectiveSort] {
+		return fmt.Errorf("--sort must be one of: insights-first, name-asc, name-desc, created-asc, created-desc")
+	}
 	return nil
 }

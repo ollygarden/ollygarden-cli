@@ -136,6 +136,9 @@ ollygarden organization                        # your org tier, features, score
 ollygarden services list                       # all services
 ollygarden services get <service-id>           # single service details
 ollygarden insights list --status active       # active insights
+ollygarden insights list --insight-type missing-service-name
+ollygarden services grouped --view service --max-score 50 --sort score
+ollygarden rose findings list --dismissed all  # include dismissed findings
 ollygarden insights summary <insight-id>       # AI-generated summary
 ollygarden analytics services                  # per-service analytics
 ollygarden update                              # install a newer stable CLI release

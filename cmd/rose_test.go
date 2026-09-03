@@ -20,6 +20,7 @@ func setupRoseServer(t *testing.T, handler http.HandlerFunc) {
 	oldFindingsExecutionID := roseFindingsListExecutionID
 	oldFindingsPage := roseFindingsListPage
 	oldFindingsLimit := roseFindingsListLimit
+	oldFindingsDismissed := roseFindingsListDismissed
 	oldExecutionsLimit := roseExecutionsListLimit
 	oldExecutionsOffset := roseExecutionsListOffset
 	oldExecutionsStatus := roseExecutionsListStatus
@@ -33,6 +34,7 @@ func setupRoseServer(t *testing.T, handler http.HandlerFunc) {
 		roseFindingsListExecutionID = oldFindingsExecutionID
 		roseFindingsListPage = oldFindingsPage
 		roseFindingsListLimit = oldFindingsLimit
+		roseFindingsListDismissed = oldFindingsDismissed
 		roseExecutionsListLimit = oldExecutionsLimit
 		roseExecutionsListOffset = oldExecutionsOffset
 		roseExecutionsListStatus = oldExecutionsStatus
