@@ -141,6 +141,9 @@ ollygarden services grouped --view service --max-score 50 --sort score
 ollygarden rose findings list --dismissed all  # include dismissed findings
 ollygarden rose executions findings <execution-id> # canonical per-run findings
 ollygarden rose executions agent-events <execution-id> --after-seq 42 # poll newer events
+ollygarden rose executions review <repository-id> # schedule a code review
+ollygarden rose executions fix <repository-id> --finding-id <finding-id>
+ollygarden rose executions instrument <repository-id> --type minimum
 ollygarden insights summary <insight-id>       # AI-generated summary
 ollygarden analytics services                  # per-service analytics
 ollygarden update                              # install a newer stable CLI release

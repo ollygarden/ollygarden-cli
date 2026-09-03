@@ -78,6 +78,53 @@ func rosePatch(ctx context.Context, f *output.Formatter, path string, body any) 
 	return apiResp, nil
 }
 
+func rosePost(ctx context.Context, f *output.Formatter, path string, body any) (*client.APIResponse, error) {
+	c := NewClient()
+	resp, err := c.Post(ctx, path, body)
+	if err != nil {
+		return nil, fmt.Errorf("requesting %s: %w", path, err)
+	}
+	apiResp, err := client.ParseResponse(resp)
+	if err != nil {
+		if apiErr, ok := err.(*client.APIError); ok {
+			var raw json.RawMessage
+			if apiErr.ErrorResponse != nil {
+				raw, _ = json.Marshal(apiErr.ErrorResponse)
+			}
+			f.PrintError(apiErr.Error(), raw)
+		}
+		return nil, err
+	}
+	return apiResp, nil
+}
+
+type roseExecutionTriggerResult struct {
+	Status      string `json:"status"`
+	ExecutionID string `json:"executionId"`
+	Message     string `json:"message"`
+}
+
+func printRoseExecutionTrigger(cmd *cobra.Command, f *output.Formatter, response *client.APIResponse) error {
+	if f.IsJSON() {
+		raw, _ := json.Marshal(response)
+		f.PrintJSON(raw)
+		return nil
+	}
+	if f.IsQuiet() {
+		return nil
+	}
+	var result roseExecutionTriggerResult
+	if err := json.Unmarshal(response.Data, &result); err != nil {
+		return fmt.Errorf("parsing execution trigger data: %w", err)
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "Status:       %s\n", result.Status)
+	if result.ExecutionID != "" {
+		fmt.Fprintf(cmd.OutOrStdout(), "Execution ID: %s\n", result.ExecutionID)
+	}
+	fmt.Fprintf(cmd.OutOrStdout(), "Message:      %s\n", result.Message)
+	return nil
+}
+
 func validateRoseRepositoryID(f *output.Formatter, id string) error {
 	if !roseUUIDPattern.MatchString(id) {
 		return roseInvalidParameters(f, "repository-id must be a UUID")

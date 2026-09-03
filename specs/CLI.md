@@ -57,6 +57,9 @@ ollygarden
 │   │   ├── activate <id>               # PATCH /rose/repositories/{id}
 │   │   └── deactivate <id>             # PATCH /rose/repositories/{id}
 │   └── executions
+│       ├── review <repository-id>      # POST /rose/codebase/review/execute
+│       ├── fix <repository-id>         # POST /rose/codebase/fix/execute
+│       ├── instrument <repository-id>  # POST /rose/codebase/instrumentation/execute
 │       ├── list                        # GET /rose/executions
 │       ├── get <id>                    # GET /rose/executions/{id}
 │       ├── agent-events <id>           # GET /rose/executions/{id}/agent-events
@@ -513,7 +516,9 @@ these commands deviate from the rest of the CLI in two ways:
 - **Field names are mixed-case** as emitted by Rose (`executionType`,
   `repo_full_name`); `--json` passes them through unchanged.
 
-Execution triggers (review/fix) are intentionally out of scope for now.
+Review, fix, and instrumentation triggers are stable public automation
+surfaces. The customer-specific Delivery Hero migration remains deliberately
+excluded from the public CLI and public OpenAPI.
 
 ---
 
@@ -650,7 +655,51 @@ An unlimited plan reports the limit as `unlimited` in human output.
 
 ---
 
-### 3.31 `ollygarden rose executions list`
+### 3.31 `ollygarden rose executions review`
+
+```
+ollygarden rose executions review <repository-id>
+```
+
+Schedules a review and prints its status, execution ID when one was created,
+and message. `cooldown`, `already_running`, and `unchanged` are successful
+HTTP 200 outcomes, not CLI errors.
+
+| API | `POST /api/v1/rose/codebase/review/execute` |
+|---|---|
+
+---
+
+### 3.32 `ollygarden rose executions fix`
+
+```
+ollygarden rose executions fix <repository-id> --finding-id <finding-id> [--finding-id <finding-id>...] [--issue-number N]
+```
+
+`--finding-id` is repeatable and required 1-10 times. Finding IDs must match
+`otel-<12 hex>`; `--issue-number`, when supplied, must be positive.
+`already_pending` is a successful HTTP 200 outcome.
+
+| API | `POST /api/v1/rose/codebase/fix/execute` |
+|---|---|
+
+---
+
+### 3.33 `ollygarden rose executions instrument`
+
+```
+ollygarden rose executions instrument <repository-id> [--type minimum|general]
+```
+
+`--type` defaults to `minimum`. `already_running`, `cooldown`,
+`already_instrumented`, and `not_implemented` are successful HTTP 200 outcomes.
+
+| API | `POST /api/v1/rose/codebase/instrumentation/execute` |
+|---|---|
+
+---
+
+### 3.34 `ollygarden rose executions list`
 
 ```
 ollygarden rose executions list [flags]
@@ -669,7 +718,7 @@ ollygarden rose executions list [flags]
 
 ---
 
-### 3.32 `ollygarden rose executions get`
+### 3.35 `ollygarden rose executions get`
 
 ```
 ollygarden rose executions get <execution-id>
@@ -687,7 +736,7 @@ agent activity are available via `--json`.
 
 ---
 
-### 3.33 `ollygarden rose executions agent-events`
+### 3.36 `ollygarden rose executions agent-events`
 
 ```
 ollygarden rose executions agent-events <execution-id> [flags]
@@ -709,7 +758,7 @@ as `--after-seq`; sessions are repeated on every response and `latestSeq` is
 
 ---
 
-### 3.34 `ollygarden rose executions findings`
+### 3.37 `ollygarden rose executions findings`
 
 ```
 ollygarden rose executions findings <execution-id> [flags]
@@ -732,7 +781,7 @@ remains supported without a runtime deprecation warning for script compatibility
 
 ---
 
-### 3.35 `ollygarden update`
+### 3.38 `ollygarden update`
 
 ```
 ollygarden update [flags]
@@ -986,6 +1035,9 @@ ollygarden rose executions list --status failed --repository-id ddca7297-a16f-4a
 # 14. Rose: inspect and poll one execution
 ollygarden rose executions findings 11111111-1111-1111-1111-111111111111
 ollygarden rose executions agent-events 11111111-1111-1111-1111-111111111111 --after-seq 42
+ollygarden rose executions review 22222222-2222-2222-2222-222222222222
+ollygarden rose executions fix 22222222-2222-2222-2222-222222222222 --finding-id otel-3f9a1c2b7d4e
+ollygarden rose executions instrument 22222222-2222-2222-2222-222222222222 --type minimum
 
 # 15. Install the latest stable CLI release when one is available
 ollygarden update
