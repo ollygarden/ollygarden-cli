@@ -143,6 +143,8 @@ ollygarden rose executions findings <execution-id> # canonical per-run findings
 ollygarden rose executions agent-events <execution-id> --after-seq 42 # poll newer events
 ollygarden insights summary <insight-id>       # AI-generated summary
 ollygarden analytics services                  # per-service analytics
+ollygarden analytics log-volume --period 24h  # organization log volume by severity
+ollygarden services log-volume <id> --period 7d # service log volume by severity
 ollygarden update                              # install a newer stable CLI release
 ollygarden webhooks create --name alerts \
   --url https://example.com/hook               # create a webhook

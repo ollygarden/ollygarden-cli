@@ -27,13 +27,15 @@ ollygarden
 │   ├── search [query]                  # GET /services/search
 │   ├── get <id>                        # GET /services/{id}
 │   ├── versions <id>                   # GET /services/{id}/versions
-│   └── insights <id>                   # GET /services/{id}/insights
+│   ├── insights <id>                   # GET /services/{id}/insights
+│   └── log-volume <id>                 # GET /services/{id}/analytics/log-volume
 ├── insights
 │   ├── list                            # GET /insights
 │   ├── get <id>                        # GET /insights/{id}
 │   └── summary <id>                    # GET /insights/{id}/summary
 ├── analytics
-│   └── services                        # GET /analytics/services
+│   ├── services                        # GET /analytics/services
+│   └── log-volume                      # GET /analytics/log-volume
 └── webhooks
     ├── list                            # GET /webhooks
     ├── create                          # POST /webhooks
@@ -282,6 +284,22 @@ ollygarden services insights <service-id> [flags]
 | API | `GET /api/v1/services/{id}/insights?status=&limit=&offset=` |
 |---|---|
 
+### 3.12.1 `ollygarden services log-volume`
+
+```
+ollygarden services log-volume <service-id> [flags]
+```
+
+| Arg/Flag | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `service-id` | string | | **yes** | Service ID |
+| `--period` | string | `24h` | no | `1h`, `6h`, `12h`, `24h`, `7d`, or `30d` |
+
+Human mode prints the period and total record count followed by severity, record-count, and percentage columns.
+
+| API | `GET /api/v1/services/{id}/analytics/log-volume?period=` |
+|---|---|
+
 ---
 
 ### 3.13 `ollygarden insights list`
@@ -357,6 +375,21 @@ ollygarden analytics services [flags]
 | `--limit` | int | 50 | no | Max services (1-100) |
 
 | API | `GET /api/v1/analytics/services?limit=` |
+|---|---|
+
+### 3.16.1 `ollygarden analytics log-volume`
+
+```
+ollygarden analytics log-volume [flags]
+```
+
+| Flag | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `--period` | string | `24h` | no | `1h`, `6h`, `12h`, `24h`, `7d`, or `30d` |
+
+Human mode prints the period and total record count followed by severity, record-count, and percentage columns. Both log-volume commands return the complete API envelope in `--json` mode and no successful output in `--quiet` mode.
+
+| API | `GET /api/v1/analytics/log-volume?period=` |
 |---|---|
 
 ---
@@ -923,6 +956,14 @@ sent only to the `ollygarden update` command's GitHub API discovery request,
 never to the passive check or release asset download hosts.
 
 ## 9. Examples
+
+```bash
+# Organization log volume for the last 24 hours
+ollygarden analytics log-volume --period 24h
+
+# One service's weekly log-volume breakdown as the complete API envelope
+ollygarden services log-volume 550e8400-e29b-41d4-a716-446655440000 --period 7d --json
+```
 
 ```bash
 # 1. Check org tier and instrumentation score
