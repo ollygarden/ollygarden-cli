@@ -119,12 +119,12 @@ func runInsightsList(cmd *cobra.Command, args []string) error {
 		if !insightsListSnapshot.all {
 			break
 		}
+		openCursor = apiResp.Meta.NextCursor
 		var pageItems []insightsListItem
 		if err := json.Unmarshal(apiResp.Data, &pageItems); err != nil {
 			return fmt.Errorf("parsing insights data: %w", err)
 		}
 		insights = append(insights, pageItems...)
-		openCursor = apiResp.Meta.NextCursor
 		if openCursor == "" {
 			break
 		}

@@ -190,7 +190,7 @@ ollygarden services grouped [flags]
 | API | `GET /api/v1/services/grouped?limit=&offset=&sort=&view=&snapshot=&cursor=`; bounded scans release with `DELETE /api/v1/services/grouped/snapshot` |
 |---|---|
 
-Snapshot pagination cannot be combined with a non-zero `--offset`. JSON mode returns one untouched API envelope so `meta.next_cursor` and `meta.snapshot_expires_at` remain available; continue by passing the cursor and the same query state. `--all` owns traversal and cleanup and therefore cannot be combined with `--json`. HTTP 410 means the cursor is invalid or expired: restart without a cursor or non-zero offset. HTTP 503 means snapshot capacity is temporarily exhausted; retry shortly or narrow the query.
+Snapshot pagination cannot be combined with a non-zero `--offset`. JSON mode returns one untouched API envelope so `meta.next_cursor` and `meta.snapshot_expires_at` remain available; continue by passing the cursor and the same query state. `--all` owns traversal and cleanup and therefore cannot be combined with `--json`. If `--max-pages` stops early, traversal fails after a page, or the process receives SIGINT/SIGTERM after a page, the CLI idempotently releases the unfinished snapshot. HTTP 410 means the cursor is invalid or expired: restart without a cursor or non-zero offset. HTTP 503 means snapshot capacity is temporarily exhausted; retry shortly or narrow the query.
 
 ---
 
@@ -292,7 +292,7 @@ ollygarden insights list [flags]
 | API | `GET /api/v1/insights?limit=&offset=&service_id=&status=&signal_type=&impact=&date_from=&date_to=&sort=&snapshot=&cursor=`; bounded scans release with `DELETE /api/v1/insights/snapshot` |
 |---|---|
 
-Snapshot pagination cannot be combined with a non-zero `--offset`. JSON mode returns one untouched API envelope so `meta.next_cursor` and `meta.snapshot_expires_at` remain available; continue by passing the cursor and the same filters/sort. `--all` owns traversal and cleanup and therefore cannot be combined with `--json`. If `--max-pages` stops early or traversal is interrupted after a page, the CLI idempotently releases the unfinished snapshot. HTTP 410 means the cursor is invalid or expired: restart with `--snapshot`, no cursor, and no non-zero offset. HTTP 503 means snapshot capacity is temporarily exhausted; retry shortly or narrow the query.
+Snapshot pagination cannot be combined with a non-zero `--offset`. JSON mode returns one untouched API envelope so `meta.next_cursor` and `meta.snapshot_expires_at` remain available; continue by passing the cursor and the same filters/sort. `--all` owns traversal and cleanup and therefore cannot be combined with `--json`. If `--max-pages` stops early, traversal fails after a page, or the process receives SIGINT/SIGTERM after a page, the CLI idempotently releases the unfinished snapshot. HTTP 410 means the cursor is invalid or expired: restart with `--snapshot`, no cursor, and no non-zero offset. HTTP 503 means snapshot capacity is temporarily exhausted; retry shortly or narrow the query.
 
 ---
 

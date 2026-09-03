@@ -123,12 +123,12 @@ func runServicesGrouped(cmd *cobra.Command, args []string) error {
 		if !servicesGroupedSnapshot.all {
 			break
 		}
+		openCursor = apiResp.Meta.NextCursor
 		var pageItems []groupedServiceItem
 		if err := json.Unmarshal(apiResp.Data, &pageItems); err != nil {
 			return fmt.Errorf("parsing grouped services data: %w", err)
 		}
 		services = append(services, pageItems...)
-		openCursor = apiResp.Meta.NextCursor
 		if openCursor == "" {
 			break
 		}
