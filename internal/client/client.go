@@ -11,7 +11,12 @@ import (
 	"strings"
 )
 
-const basePath = "/api/v1"
+type APIVersion string
+
+const (
+	V1 APIVersion = "v1"
+	V2 APIVersion = "v2"
+)
 
 // version is set by the cmd package at init time.
 var version = "dev"
@@ -30,8 +35,13 @@ type Client struct {
 
 // New creates a new API client.
 func New(baseURL, apiKey string) *Client {
+	return NewVersioned(baseURL, apiKey, V1)
+}
+
+// NewVersioned creates a client rooted at one explicitly selected public API version.
+func NewVersioned(baseURL, apiKey string, apiVersion APIVersion) *Client {
 	return &Client{
-		baseURL:    strings.TrimRight(baseURL, "/") + basePath,
+		baseURL:    strings.TrimRight(baseURL, "/") + "/api/" + string(apiVersion),
 		apiKey:     apiKey,
 		httpClient: &http.Client{},
 	}
@@ -39,6 +49,9 @@ func New(baseURL, apiKey string) *Client {
 
 // Get performs a GET request.
 func (c *Client) Get(ctx context.Context, path string, query url.Values) (*http.Response, error) {
+	if err := validateResourcePath(path); err != nil {
+		return nil, err
+	}
 	u := c.baseURL + path
 	if len(query) > 0 {
 		u += "?" + query.Encode()
@@ -72,6 +85,9 @@ func (c *Client) Delete(ctx context.Context, path string) (*http.Response, error
 
 // DeleteQuery performs a DELETE request with query parameters.
 func (c *Client) DeleteQuery(ctx context.Context, path string, query url.Values) (*http.Response, error) {
+	if err := validateResourcePath(path); err != nil {
+		return nil, err
+	}
 	u := c.baseURL + path
 	if len(query) > 0 {
 		u += "?" + query.Encode()
@@ -84,6 +100,9 @@ func (c *Client) DeleteQuery(ctx context.Context, path string, query url.Values)
 }
 
 func (c *Client) doWithBody(ctx context.Context, method, path string, body any) (*http.Response, error) {
+	if err := validateResourcePath(path); err != nil {
+		return nil, err
+	}
 	var buf bytes.Buffer
 	if body != nil {
 		if err := json.NewEncoder(&buf).Encode(body); err != nil {
@@ -96,6 +115,13 @@ func (c *Client) doWithBody(ctx context.Context, method, path string, body any) 
 	}
 	req.Header.Set("Content-Type", "application/json")
 	return c.do(req)
+}
+
+func validateResourcePath(path string) error {
+	if !strings.HasPrefix(path, "/") || strings.HasPrefix(path, "/api/") {
+		return fmt.Errorf("resource path must start with / and must not include an API version")
+	}
+	return nil
 }
 
 func (c *Client) do(req *http.Request) (*http.Response, error) {

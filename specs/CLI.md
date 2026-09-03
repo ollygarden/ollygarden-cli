@@ -36,6 +36,9 @@ ollygarden
 ├── analytics
 │   ├── services                        # GET /analytics/services
 │   └── log-volume                      # GET /analytics/log-volume
+├── magnolia
+│   ├── report                          # GET /api/v2/magnolia/report
+│   └── findings                        # GET /api/v2/magnolia/findings
 └── webhooks
     ├── list                            # GET /webhooks
     ├── create                          # POST /webhooks
@@ -394,6 +397,35 @@ Human mode prints the period and total record count followed by severity, record
 
 | API | `GET /api/v1/analytics/log-volume?period=` |
 |---|---|
+
+---
+
+### 3.16a Magnolia commands
+
+```bash
+ollygarden magnolia report --org-id <clerk-org-id>
+ollygarden magnolia findings --org-id <clerk-org-id>
+```
+
+Both commands use the authenticated, organization-scoped API-key automation
+contract on API v2. `--org-id` is required and Olive rejects a value that does
+not match the key's organization. `report` shows the report window and signal
+totals in human mode. `findings` shows one row per finding group.
+
+These endpoints do not share the v1 envelope: report returns its own
+`{orgId,window,generatedAt,data}` envelope, while findings is the raw
+`{run,summary,findings,groups}` artifact. Consequently `--json` preserves each
+response without wrapping it. The HTML visualization and all v3 per-widget
+routes remain internal and are intentionally not CLI commands.
+
+| Flag | Type | Required | Description |
+|---|---|---|---|
+| `--org-id` | string | **yes** | Organization identifier from `ollygarden organization` |
+
+| Command | API |
+|---|---|
+| `magnolia report` | `GET /api/v2/magnolia/report?orgId=` |
+| `magnolia findings` | `GET /api/v2/magnolia/findings?orgId=` |
 
 ---
 
@@ -1082,12 +1114,16 @@ ollygarden rose executions instrument 22222222-2222-2222-2222-222222222222 --typ
 
 # 15. Install the latest stable CLI release when one is available
 ollygarden update
+
+# 16. Read the latest automation-safe Magnolia artifacts
+ollygarden magnolia report --org-id org_abc123
+ollygarden magnolia findings --org-id org_abc123 --json | jq '.groups'
 ```
 
 ## 10. Implementation Notes
 
 - **Language**: Go with Cobra
-- **API base path**: `/api/v1`
+- **API base path**: `/api/v1` by default; Magnolia artifact commands explicitly select `/api/v2`
 - **Auth token format**: `og_sk_{6char}_{32hex}`
 - **Rate limit**: 60 req/min per key
 - **Response envelope**: `{data, meta{timestamp, total, has_more, trace_id}, links}`
