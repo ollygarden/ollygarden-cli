@@ -48,10 +48,14 @@ ollygarden
 │   ├── findings
 │   │   ├── summary                     # GET /rose/findings/summary
 │   │   ├── list                        # GET /rose/findings
-│   │   └── get <repo-id> <finding-id>  # GET /rose/repositories/{id} (finding extracted client-side)
+│   │   ├── get <repo-id> <finding-id>  # GET /rose/repositories/{id} (finding extracted client-side)
+│   │   ├── dismiss <repo-id> <finding-id> # PATCH /rose/repositories/{id}/findings/{finding-id}
+│   │   └── restore <repo-id> <finding-id> # PATCH /rose/repositories/{id}/findings/{finding-id}
 │   ├── repositories
 │   │   ├── list                        # GET /rose/repositories
-│   │   └── get <id>                    # GET /rose/repositories/{id}
+│   │   ├── get <id>                    # GET /rose/repositories/{id}
+│   │   ├── activate <id>               # PATCH /rose/repositories/{id}
+│   │   └── deactivate <id>             # PATCH /rose/repositories/{id}
 │   └── executions
 │       ├── list                        # GET /rose/executions
 │       ├── get <id>                    # GET /rose/executions/{id}
@@ -509,8 +513,7 @@ these commands deviate from the rest of the CLI in two ways:
 - **Field names are mixed-case** as emitted by Rose (`executionType`,
   `repo_full_name`); `--json` passes them through unchanged.
 
-Rose read commands are the only ones implemented so far; execution triggers
-(review/fix) are intentionally out of scope for now.
+Execution triggers (review/fix) are intentionally out of scope for now.
 
 ---
 
@@ -577,6 +580,24 @@ from the repository exits 4 with code `FINDING_NOT_FOUND`.
 
 ---
 
+### 3.28a `ollygarden rose findings dismiss` / `restore`
+
+```console
+ollygarden rose findings dismiss <repository-id> <finding-id> [--reason <text>]
+ollygarden rose findings restore <repository-id> <finding-id>
+```
+
+Both IDs are validated before network I/O. `repository-id` is a UUID and
+`finding-id` has the form `otel-<12 hex>`. The optional dismissal reason is at
+most 1000 characters. Omitting `--reason` omits `dismissed_reason` from the
+request; restore sends only `{"dismissed":false}`, which clears the stored
+reason and timestamp. Dismissal is reversible and does not prompt.
+
+| API | `PATCH /api/v1/rose/repositories/{repository_id}/findings/{finding_id}` |
+|---|---|
+
+---
+
 ### 3.29 `ollygarden rose repositories list`
 
 ```
@@ -606,6 +627,25 @@ Shows repository state, instrumentation metadata, and the active findings
 table.
 
 | API | `GET /api/v1/rose/repositories/{repository_id}` |
+|---|---|
+
+---
+
+### 3.30a `ollygarden rose repositories activate` / `deactivate`
+
+```console
+ollygarden rose repositories activate <repository-id>
+ollygarden rose repositories deactivate <repository-id> [--confirm]
+```
+
+Activation sends `{"is_active":true}` and may fail when the organization's
+repository limit or plan does not permit another active repository.
+Deactivation sends `{"is_active":false}` and uses the destructive-operation
+confirmation rules in §7. Successful human output reports the resulting state
+and active repository count/limit, including idempotent no-op responses.
+An unlimited plan reports the limit as `unlimited` in human output.
+
+| API | `PATCH /api/v1/rose/repositories/{repository_id}` |
 |---|---|
 
 ---
@@ -849,7 +889,9 @@ API key and API URL resolve independently — `--api-url=internal --context=prod
 
 ## 7. Safety Rules for Destructive Operations
 
-Only `webhooks delete` is destructive in this API surface.
+`webhooks delete` and `rose repositories deactivate` are destructive in this
+API surface. Finding dismissal is reversible through `findings restore`, so it
+does not require confirmation.
 
 | Rule | Implementation |
 |---|---|
@@ -857,6 +899,10 @@ Only `webhooks delete` is destructive in this API surface.
 | **`--confirm` flag** | Bypasses the interactive prompt. Required for non-interactive/scripted use. |
 | **Non-TTY without `--confirm`** | Exit code `2`: `Error: --confirm required for non-interactive webhook deletion` |
 | **`--quiet` interaction** | `--quiet` does not suppress the confirmation prompt. |
+
+Repository deactivation uses the prompt
+`Deactivate repository (id: <id>)? [y/N]:` and non-interactive invocations
+without `--confirm` fail with exit code 2 before network I/O.
 
 ## 8. Config / Env Rules
 
@@ -927,6 +973,12 @@ ollygarden rose findings list --severity critical,high --dismissed false
 
 # 12. Rose: full detail for one finding (repository ID from the list output)
 ollygarden rose findings get ddca7297-a16f-4ac4-bd31-d20c90f3cdaa otel-6576685e6e1f
+ollygarden rose findings dismiss ddca7297-a16f-4ac4-bd31-d20c90f3cdaa otel-6576685e6e1f --reason "Accepted risk"
+ollygarden rose findings restore ddca7297-a16f-4ac4-bd31-d20c90f3cdaa otel-6576685e6e1f
+
+# 12b. Activate or explicitly deactivate repository analysis
+ollygarden rose repositories activate ddca7297-a16f-4ac4-bd31-d20c90f3cdaa
+ollygarden rose repositories deactivate ddca7297-a16f-4ac4-bd31-d20c90f3cdaa --confirm
 
 # 13. Rose: recent failed executions for a repository
 ollygarden rose executions list --status failed --repository-id ddca7297-a16f-4ac4-bd31-d20c90f3cdaa --limit 10

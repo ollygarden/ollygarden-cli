@@ -33,6 +33,7 @@ type roseListEnvelope struct {
 const emDash = "—"
 
 var roseUUIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+var roseFindingIDPattern = regexp.MustCompile(`^otel-[0-9a-fA-F]{12}$`)
 
 // roseGet performs a GET against a Rose endpoint and parses the envelope.
 // API errors are printed through the formatter (so --json mode gets the
@@ -55,6 +56,40 @@ func roseGet(ctx context.Context, f *output.Formatter, path string, query url.Va
 		return nil, err
 	}
 	return apiResp, nil
+}
+
+func rosePatch(ctx context.Context, f *output.Formatter, path string, body any) (*client.APIResponse, error) {
+	c := NewClient()
+	resp, err := c.Patch(ctx, path, body)
+	if err != nil {
+		return nil, fmt.Errorf("requesting %s: %w", path, err)
+	}
+	apiResp, err := client.ParseResponse(resp)
+	if err != nil {
+		if apiErr, ok := err.(*client.APIError); ok {
+			var raw json.RawMessage
+			if apiErr.ErrorResponse != nil {
+				raw, _ = json.Marshal(apiErr.ErrorResponse)
+			}
+			f.PrintError(apiErr.Error(), raw)
+		}
+		return nil, err
+	}
+	return apiResp, nil
+}
+
+func validateRoseRepositoryID(f *output.Formatter, id string) error {
+	if !roseUUIDPattern.MatchString(id) {
+		return roseInvalidParameters(f, "repository-id must be a UUID")
+	}
+	return nil
+}
+
+func validateRoseFindingID(f *output.Formatter, id string) error {
+	if !roseFindingIDPattern.MatchString(id) {
+		return roseInvalidParameters(f, "finding-id must match otel-<12 hex>")
+	}
+	return nil
 }
 
 func newFormatter(cmd *cobra.Command) *output.Formatter {
