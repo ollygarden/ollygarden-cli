@@ -205,7 +205,7 @@ func validateInsightsListFilters() error {
 	if !csvValuesAllowed(insightsListImpact, "Critical", "Important", "Normal", "Low") {
 		return fmt.Errorf("--impact must contain only: Critical, Important, Normal, Low")
 	}
-	if insightsListSignalType != "" && !csvValuesAllowed(insightsListSignalType, "trace", "metric", "log") {
+	if insightsListSignalType != "" && insightsListSignalType != "trace" && insightsListSignalType != "metric" && insightsListSignalType != "log" {
 		return fmt.Errorf("--signal-type must be one of: trace, metric, log")
 	}
 	for flag, value := range map[string]string{"--date-from": insightsListDateFrom, "--date-to": insightsListDateTo} {

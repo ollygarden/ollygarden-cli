@@ -271,6 +271,7 @@ func TestInsightsListInvalidFiltersBeforeRequest(t *testing.T) {
 		{"long insight type", []string{"--insight-type", strings.Repeat("x", 129)}, "each --insight-type"},
 		{"too many insight types", []string{"--insight-type", strings.Repeat("x,", 100) + "x"}, "between 1 and 100"},
 		{"signal type", []string{"--signal-type", "span"}, "--signal-type"},
+		{"multiple signal types", []string{"--signal-type", "trace,metric"}, "--signal-type"},
 		{"impact", []string{"--impact", "critical"}, "--impact"},
 		{"date from", []string{"--date-from", "yesterday"}, "--date-from"},
 		{"date order", []string{"--date-from", "2026-02-02T00:00:00Z", "--date-to", "2026-02-01T00:00:00Z"}, "must not be after"},
