@@ -65,3 +65,28 @@ func TestRoseFindingsDismissValidationBeforeRequest(t *testing.T) {
 	}
 	assert.Zero(t, requests)
 }
+
+func TestRoseFindingsDismissAPIErrors(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		status   int
+		code     string
+		message  string
+		exitCode int
+	}{
+		{"not found", http.StatusNotFound, "FINDING_NOT_FOUND", "Finding not found", 4},
+		{"upstream failure", http.StatusInternalServerError, "INTERNAL_ERROR", "Internal server error", 6},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			setupRoseServer(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tc.status)
+				fmt.Fprintf(w, `{"error":{"code":%q,"message":%q},"meta":{"trace_id":"trace-error"}}`, tc.code, tc.message)
+			})
+			_, stderr, err := executeCommand("rose", "findings", "dismiss", roseTestRepositoryID, "otel-aabbccddeeff")
+			require.Error(t, err)
+			assert.Equal(t, tc.exitCode, client.ExitCodeFromError(err))
+			assert.Contains(t, stderr, tc.message)
+			assert.Contains(t, stderr, "trace-error")
+		})
+	}
+}

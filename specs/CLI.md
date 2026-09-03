@@ -582,7 +582,7 @@ from the repository exits 4 with code `FINDING_NOT_FOUND`.
 
 ### 3.28a `ollygarden rose findings dismiss` / `restore`
 
-```
+```console
 ollygarden rose findings dismiss <repository-id> <finding-id> [--reason <text>]
 ollygarden rose findings restore <repository-id> <finding-id>
 ```
@@ -633,7 +633,7 @@ table.
 
 ### 3.30a `ollygarden rose repositories activate` / `deactivate`
 
-```
+```console
 ollygarden rose repositories activate <repository-id>
 ollygarden rose repositories deactivate <repository-id> [--confirm]
 ```
