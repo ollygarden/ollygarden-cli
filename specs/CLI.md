@@ -54,7 +54,9 @@ ollygarden
 │   │   └── get <id>                    # GET /rose/repositories/{id}
 │   └── executions
 │       ├── list                        # GET /rose/executions
-│       └── get <id>                    # GET /rose/executions/{id}
+│       ├── get <id>                    # GET /rose/executions/{id}
+│       ├── agent-events <id>           # GET /rose/executions/{id}/agent-events
+│       └── findings <id>               # GET /rose/codebase/findings?executionId={id}
 ```
 
 ## 2. Global Flags
@@ -539,7 +541,7 @@ ollygarden rose findings list [flags]
 | `--severity` | string | | no | Comma-separated: `critical`, `high`, `medium`, `low`, `suggestion` |
 | `--category` | string | | no | Comma-separated, e.g. `"Sensitive Data,Volume"` |
 | `--status` | string | `active` | no | `active`, `resolved`, `all` |
-| `--execution-id` | UUID | | no | Only findings produced by this execution |
+| `--execution-id` | UUID | | no | Legacy execution filter; prefer `rose executions findings <execution-id>` |
 | `--page` | int | 1 | no | Page number (≥1) |
 | `--limit` | int | 50 | no | Results per page (1-100), sent as `page_size` |
 | `--dismissed` | string | `false` | no | `false`, `true`, `all` |
@@ -645,7 +647,52 @@ agent activity are available via `--json`.
 
 ---
 
-### 3.33 `ollygarden update`
+### 3.33 `ollygarden rose executions agent-events`
+
+```
+ollygarden rose executions agent-events <execution-id> [flags]
+```
+
+| Arg/Flag | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `execution-id` | UUID | | **yes** | Execution ID |
+| `--after-seq` | int64 | -1 | no | Return events whose `seq` is strictly greater than this cursor (≥-1) |
+| `--limit` | int | 500 | no | Maximum events to return (1-500) |
+
+Human mode prints the sequence-ordered event timeline. An empty timeline prints
+only the table header. For polling, pass the prior JSON response's `latestSeq`
+as `--after-seq`; sessions are repeated on every response and `latestSeq` is
+`null` when no events are returned.
+
+| API | `GET /api/v1/rose/executions/{execution_id}/agent-events?afterSeq=&limit=` |
+|---|---|
+
+---
+
+### 3.34 `ollygarden rose executions findings`
+
+```
+ollygarden rose executions findings <execution-id> [flags]
+```
+
+| Arg/Flag | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `execution-id` | UUID | | **yes** | Execution ID |
+| `--status` | string | `all` | no | `active`, `resolved`, `all` |
+| `--dismissed` | string | `false` | no | `false`, `true`, `all` |
+| `--page` | int | 1 | no | Page number (≥1) |
+| `--limit` | int | 50 | no | Results per page (1-100), sent as `page_size` |
+
+This is the canonical per-run findings command and includes resolved findings
+by default. The older `rose findings list --execution-id <execution-id>` form
+remains supported without a runtime deprecation warning for script compatibility.
+
+| API | `GET /api/v1/rose/codebase/findings?executionId=&status=&dismissed=&page=&page_size=` |
+|---|---|
+
+---
+
+### 3.35 `ollygarden update`
 
 ```
 ollygarden update [flags]
@@ -884,7 +931,11 @@ ollygarden rose findings get ddca7297-a16f-4ac4-bd31-d20c90f3cdaa otel-6576685e6
 # 13. Rose: recent failed executions for a repository
 ollygarden rose executions list --status failed --repository-id ddca7297-a16f-4ac4-bd31-d20c90f3cdaa --limit 10
 
-# 14. Install the latest stable CLI release when one is available
+# 14. Rose: inspect and poll one execution
+ollygarden rose executions findings 11111111-1111-1111-1111-111111111111
+ollygarden rose executions agent-events 11111111-1111-1111-1111-111111111111 --after-seq 42
+
+# 15. Install the latest stable CLI release when one is available
 ollygarden update
 ```
 

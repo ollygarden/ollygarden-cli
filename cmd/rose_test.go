@@ -26,6 +26,12 @@ func setupRoseServer(t *testing.T, handler http.HandlerFunc) {
 	oldExecutionsStatus := roseExecutionsListStatus
 	oldExecutionsRepositoryID := roseExecutionsListRepositoryID
 	oldExecutionsType := roseExecutionsListType
+	oldExecutionEventsAfterSeq := roseExecutionAgentEventsAfterSeq
+	oldExecutionEventsLimit := roseExecutionAgentEventsLimit
+	oldExecutionFindingsStatus := roseExecutionsFindingsStatus
+	oldExecutionFindingsDismissed := roseExecutionsFindingsDismissed
+	oldExecutionFindingsPage := roseExecutionsFindingsPage
+	oldExecutionFindingsLimit := roseExecutionsFindingsLimit
 	setupAPIServer(t, handler)
 	t.Cleanup(func() {
 		roseFindingsListSeverity = oldFindingsSeverity
@@ -40,6 +46,12 @@ func setupRoseServer(t *testing.T, handler http.HandlerFunc) {
 		roseExecutionsListStatus = oldExecutionsStatus
 		roseExecutionsListRepositoryID = oldExecutionsRepositoryID
 		roseExecutionsListType = oldExecutionsType
+		roseExecutionAgentEventsAfterSeq = oldExecutionEventsAfterSeq
+		roseExecutionAgentEventsLimit = oldExecutionEventsLimit
+		roseExecutionsFindingsStatus = oldExecutionFindingsStatus
+		roseExecutionsFindingsDismissed = oldExecutionFindingsDismissed
+		roseExecutionsFindingsPage = oldExecutionFindingsPage
+		roseExecutionsFindingsLimit = oldExecutionFindingsLimit
 	})
 }
 

@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/ollygarden/ollygarden-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +44,7 @@ func init() {
 	roseFindingsListCmd.Flags().StringVar(&roseFindingsListSeverity, "severity", "", "Filter by severity (comma-separated: critical, high, medium, low, suggestion)")
 	roseFindingsListCmd.Flags().StringVar(&roseFindingsListCategory, "category", "", "Filter by category (comma-separated, e.g. \"Sensitive Data,Volume\")")
 	roseFindingsListCmd.Flags().StringVar(&roseFindingsListStatus, "status", "active", "Finding status (active, resolved, all)")
-	roseFindingsListCmd.Flags().StringVar(&roseFindingsListExecutionID, "execution-id", "", "Only findings produced by this execution")
+	roseFindingsListCmd.Flags().StringVar(&roseFindingsListExecutionID, "execution-id", "", "Legacy execution filter (prefer rose executions findings <execution-id>)")
 	roseFindingsListCmd.Flags().IntVar(&roseFindingsListPage, "page", 1, "Page number (≥1)")
 	roseFindingsListCmd.Flags().IntVar(&roseFindingsListLimit, "limit", 50, "Results per page (1-100)")
 	roseFindingsListCmd.Flags().StringVar(&roseFindingsListDismissed, "dismissed", "false", "Dismissed filter (false, true, all)")
@@ -104,13 +105,25 @@ func runRoseFindingsList(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	list, err := printRoseFindingsTable(f, apiResp.Data)
+	if err != nil {
+		return err
+	}
+
+	if list.Pagination.HasMore {
+		f.PrintPageHint(list.Pagination.Total, roseFindingsListPage, roseFindingsListLimit)
+	}
+	return nil
+}
+
+func printRoseFindingsTable(f *output.Formatter, data json.RawMessage) (roseListEnvelope, error) {
 	var list roseListEnvelope
-	if err := json.Unmarshal(apiResp.Data, &list); err != nil {
-		return fmt.Errorf("parsing findings data: %w", err)
+	if err := json.Unmarshal(data, &list); err != nil {
+		return list, fmt.Errorf("parsing findings data: %w", err)
 	}
 	var findings []roseFindingListItem
 	if err := json.Unmarshal(list.Data, &findings); err != nil {
-		return fmt.Errorf("parsing findings data: %w", err)
+		return list, fmt.Errorf("parsing findings data: %w", err)
 	}
 
 	headers := []string{"FINDING ID", "SEVERITY", "CATEGORY", "REPOSITORY", "PR", "TITLE"}
@@ -123,9 +136,5 @@ func runRoseFindingsList(cmd *cobra.Command, args []string) error {
 		rows[i] = []string{fd.FindingID, fd.Severity, orDash(fd.Category), fd.RepoFullName, prRef(fd.PRNumber, fd.PRStatus), title}
 	}
 	f.PrintTable(headers, rows)
-
-	if list.Pagination.HasMore {
-		f.PrintPageHint(list.Pagination.Total, roseFindingsListPage, roseFindingsListLimit)
-	}
-	return nil
+	return list, nil
 }
