@@ -62,7 +62,16 @@ func (c *Client) Put(ctx context.Context, path string, body any) (*http.Response
 
 // Delete performs a DELETE request.
 func (c *Client) Delete(ctx context.Context, path string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.baseURL+path, nil)
+	return c.DeleteQuery(ctx, path, nil)
+}
+
+// DeleteQuery performs a DELETE request with query parameters.
+func (c *Client) DeleteQuery(ctx context.Context, path string, query url.Values) (*http.Response, error) {
+	u := c.baseURL + path
+	if len(query) > 0 {
+		u += "?" + query.Encode()
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -99,10 +108,12 @@ type APIResponse struct {
 }
 
 type ResponseMeta struct {
-	Timestamp string `json:"timestamp,omitempty"`
-	Total     int    `json:"total,omitempty"`
-	HasMore   bool   `json:"has_more,omitempty"`
-	TraceID   string `json:"trace_id,omitempty"`
+	Timestamp         string `json:"timestamp,omitempty"`
+	Total             int    `json:"total,omitempty"`
+	HasMore           bool   `json:"has_more,omitempty"`
+	TraceID           string `json:"trace_id,omitempty"`
+	NextCursor        string `json:"next_cursor,omitempty"`
+	SnapshotExpiresAt string `json:"snapshot_expires_at,omitempty"`
 }
 
 type ErrorResponse struct {

@@ -15,11 +15,15 @@ func setupServicesGroupedServer(t *testing.T, handler http.HandlerFunc) {
 	oldLimit := servicesGroupedLimit
 	oldOffset := servicesGroupedOffset
 	oldSort := servicesGroupedSort
+	oldView := servicesGroupedView
+	oldSnapshot := servicesGroupedSnapshot
 	setupAPIServer(t, handler)
 	t.Cleanup(func() {
 		servicesGroupedLimit = oldLimit
 		servicesGroupedOffset = oldOffset
 		servicesGroupedSort = oldSort
+		servicesGroupedView = oldView
+		servicesGroupedSnapshot = oldSnapshot
 	})
 }
 
@@ -79,6 +83,18 @@ func TestServicesGroupedJSON(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(out), &envelope))
 	assert.Equal(t, "tr1", envelope.Meta.TraceID)
 	assert.Contains(t, string(envelope.Data), "api-gateway")
+}
+
+func TestServicesGroupedServiceViewStartsSnapshot(t *testing.T) {
+	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "service", r.URL.Query().Get("view"))
+		assert.Equal(t, "true", r.URL.Query().Get("snapshot"))
+		assert.Equal(t, "score", r.URL.Query().Get("sort"))
+		w.Write([]byte(`{"data":[],"meta":{"next_cursor":"opaque","snapshot_expires_at":"2026-09-03T12:15:00Z"}}`))
+	})
+	out, _, err := executeCommand("services", "grouped", "--view", "service", "--json")
+	require.NoError(t, err)
+	assert.Contains(t, out, `"next_cursor":"opaque"`)
 }
 
 func TestServicesGroupedQuiet(t *testing.T) {

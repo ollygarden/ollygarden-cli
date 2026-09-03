@@ -21,6 +21,7 @@ var (
 	insightsListDateFrom   string
 	insightsListDateTo     string
 	insightsListSort       string
+	insightsListSnapshot   snapshotFlags
 )
 
 type insightsListItem struct {
@@ -49,6 +50,10 @@ func init() {
 	insightsListCmd.Flags().StringVar(&insightsListDateFrom, "date-from", "", "Filter from date (RFC3339)")
 	insightsListCmd.Flags().StringVar(&insightsListDateTo, "date-to", "", "Filter to date (RFC3339)")
 	insightsListCmd.Flags().StringVar(&insightsListSort, "sort", "-detected_ts", "Sort field (prefix +/- for asc/desc: detected_ts, created_at, updated_at, impact, signal_type)")
+	insightsListCmd.Flags().BoolVar(&insightsListSnapshot.enabled, "snapshot", false, "Start a mutation-stable snapshot")
+	insightsListCmd.Flags().StringVar(&insightsListSnapshot.cursor, "cursor", "", "Continue with an opaque snapshot cursor")
+	insightsListCmd.Flags().BoolVar(&insightsListSnapshot.all, "all", false, "Read all pages from one mutation-stable snapshot")
+	insightsListCmd.Flags().IntVar(&insightsListSnapshot.maxPages, "max-pages", 0, "Stop --all after this many pages and release the snapshot (0 means unlimited)")
 }
 
 func runInsightsList(cmd *cobra.Command, args []string) error {
@@ -57,6 +62,9 @@ func runInsightsList(cmd *cobra.Command, args []string) error {
 	}
 	if insightsListOffset < 0 {
 		return fmt.Errorf("--offset must be >= 0")
+	}
+	if err := insightsListSnapshot.validate(insightsListOffset, jsonMode); err != nil {
+		return err
 	}
 
 	c := NewClient()
@@ -84,22 +92,46 @@ func runInsightsList(cmd *cobra.Command, args []string) error {
 	if insightsListDateTo != "" {
 		query.Set("date_to", insightsListDateTo)
 	}
+	insightsListSnapshot.apply(query)
 
-	resp, err := c.Get(cmd.Context(), "/insights", query)
-	if err != nil {
-		return fmt.Errorf("requesting insights: %w", err)
-	}
-
-	apiResp, err := client.ParseResponse(resp)
-	if err != nil {
-		if apiErr, ok := err.(*client.APIError); ok {
-			var raw json.RawMessage
-			if apiErr.ErrorResponse != nil {
-				raw, _ = json.Marshal(apiErr.ErrorResponse)
+	var insights []insightsListItem
+	var apiResp *client.APIResponse
+	openCursor := ""
+	if insightsListSnapshot.all {
+		defer func() {
+			if openCursor != "" {
+				if err := releaseSnapshot(c, "/insights/snapshot", openCursor, query); err != nil && !quiet {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: could not release unfinished insights snapshot: %v\n", err)
+				}
 			}
-			f.PrintError(apiErr.Error(), raw)
+		}()
+	}
+	for page := 1; ; page++ {
+		resp, err := c.Get(cmd.Context(), "/insights", query)
+		if err != nil {
+			return fmt.Errorf("requesting insights: %w", err)
 		}
-		return err
+		apiResp, err = client.ParseResponse(resp)
+		if err != nil {
+			printAPIError(f, err)
+			return err
+		}
+		if !insightsListSnapshot.all {
+			break
+		}
+		openCursor = apiResp.Meta.NextCursor
+		var pageItems []insightsListItem
+		if err := json.Unmarshal(apiResp.Data, &pageItems); err != nil {
+			return fmt.Errorf("parsing insights data: %w", err)
+		}
+		insights = append(insights, pageItems...)
+		if openCursor == "" {
+			break
+		}
+		if insightsListSnapshot.maxPages > 0 && page >= insightsListSnapshot.maxPages {
+			break
+		}
+		query.Set("cursor", openCursor)
 	}
 
 	if f.IsJSON() {
@@ -112,9 +144,10 @@ func runInsightsList(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	var insights []insightsListItem
-	if err := json.Unmarshal(apiResp.Data, &insights); err != nil {
-		return fmt.Errorf("parsing insights data: %w", err)
+	if !insightsListSnapshot.all {
+		if err := json.Unmarshal(apiResp.Data, &insights); err != nil {
+			return fmt.Errorf("parsing insights data: %w", err)
+		}
 	}
 
 	headers := []string{"ID", "TYPE", "IMPACT", "SIGNAL", "SERVICE", "DETECTED"}
@@ -133,7 +166,9 @@ func runInsightsList(cmd *cobra.Command, args []string) error {
 
 	f.PrintTable(headers, rows)
 
-	if apiResp.Meta.HasMore {
+	if apiResp.Meta.NextCursor != "" && !insightsListSnapshot.all {
+		fmt.Fprintf(cmd.ErrOrStderr(), "# More results. Continue with --cursor %q and the same filters and sort.\n", apiResp.Meta.NextCursor)
+	} else if apiResp.Meta.HasMore && !insightsListSnapshot.all {
 		f.PrintPaginationHint(apiResp.Meta.Total, insightsListOffset, insightsListLimit)
 	}
 
