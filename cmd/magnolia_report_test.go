@@ -26,3 +26,13 @@ func TestMagnoliaReportJSONPreservesCustomEnvelope(t *testing.T) {
 	assert.NoError(t, err)
 	assert.JSONEq(t, body, out)
 }
+
+func TestMagnoliaReportQuiet(t *testing.T) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"orgId":"org_test","window":{},"data":{"summary":{}}}`))
+	})
+	out, stderr, err := executeCommand("magnolia", "report", "--org-id", "org_test", "--quiet")
+	assert.NoError(t, err)
+	assert.Empty(t, out)
+	assert.Empty(t, stderr)
+}
