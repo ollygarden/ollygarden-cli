@@ -134,11 +134,15 @@ func SetBuildInfo(v, c, d string) {
 // For auth subcommands that call NewClient (auth status --probe), they
 // must populate resolvedCreds themselves before calling.
 func NewClient() *client.Client {
+	return NewVersionedClient(client.V1)
+}
+
+func NewVersionedClient(apiVersion client.APIVersion) *client.Client {
 	if resolvedCreds.APIKey != "" {
-		return client.New(resolvedCreds.APIURL, resolvedCreds.APIKey)
+		return client.NewVersioned(resolvedCreds.APIURL, resolvedCreds.APIKey, apiVersion)
 	}
 	// Fallback for the rare path where resolution was skipped: use env directly.
-	return client.New(apiURL, os.Getenv("OLLYGARDEN_API_KEY"))
+	return client.NewVersioned(apiURL, os.Getenv("OLLYGARDEN_API_KEY"), apiVersion)
 }
 
 // Execute runs the root command and exits with the appropriate code.

@@ -40,6 +40,25 @@ func TestBaseURLConstruction(t *testing.T) {
 	resp.Body.Close()
 }
 
+func TestVersionedBaseURLConstruction(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/api/v2/magnolia/report", r.URL.Path)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := NewVersioned(srv.URL, "key", V2)
+	resp, err := c.Get(context.Background(), "/magnolia/report", nil)
+	require.NoError(t, err)
+	resp.Body.Close()
+}
+
+func TestVersionedClientRejectsVersionedResourcePath(t *testing.T) {
+	c := NewVersioned("https://api.example.com", "key", V2)
+	_, err := c.Get(context.Background(), "/api/v1/services", nil)
+	require.EqualError(t, err, "resource path must start with / and must not include an API version")
+}
+
 func TestParseResponseSuccess(t *testing.T) {
 	body := `{"data":{"id":"123"},"meta":{"timestamp":"2026-01-01T00:00:00Z","trace_id":"abc"}}`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
