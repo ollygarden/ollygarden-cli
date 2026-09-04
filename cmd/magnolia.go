@@ -13,9 +13,10 @@ import (
 )
 
 var magnoliaCmd = &cobra.Command{
-	Use:   "magnolia",
-	Short: "Read Magnolia telemetry analysis artifacts",
-	Args:  cobra.NoArgs,
+	Use:    "magnolia",
+	Short:  "Read Magnolia telemetry analysis artifacts",
+	Args:   cobra.NoArgs,
+	Hidden: true,
 }
 
 func init() {
@@ -23,10 +24,10 @@ func init() {
 }
 
 func magnoliaGet(cmd *cobra.Command, f *output.Formatter, path, orgID string) ([]byte, error) {
-	if orgID == "" {
-		return nil, fmt.Errorf("--org-id is required")
+	query := url.Values{}
+	if orgID != "" {
+		query.Set("orgId", orgID)
 	}
-	query := url.Values{"orgId": []string{orgID}}
 	resp, err := NewVersionedClient(client.V2).Get(cmd.Context(), path, query)
 	if err != nil {
 		return nil, fmt.Errorf("requesting %s: %w", path, err)
