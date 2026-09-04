@@ -35,8 +35,7 @@ ollygarden
 │   └── summary <id>                    # GET /insights/{id}/summary
 ├── analytics
 │   ├── services                        # GET /analytics/services
-│   └── log-volume                      # GET /analytics/log-volume
-├── magnolia
+│   ├── log-volume                      # GET /analytics/log-volume
 │   ├── report                          # GET /api/v2/magnolia/report
 │   └── findings                        # GET /api/v2/magnolia/findings
 └── webhooks
@@ -400,17 +399,18 @@ Human mode prints the period and total record count followed by severity, record
 
 ---
 
-### 3.16a Magnolia commands
+### 3.16a Analytics report commands
 
 ```bash
-ollygarden magnolia report --org-id <clerk-org-id>
-ollygarden magnolia findings --org-id <clerk-org-id>
+ollygarden analytics report
+ollygarden analytics findings
 ```
 
 Both commands use the authenticated, organization-scoped API-key automation
-contract on API v2. `--org-id` is required and Olive rejects a value that does
-not match the key's organization. `report` shows the report window and signal
-totals in human mode. `findings` shows one row per finding group.
+contract on API v2. Olive derives the organization from authentication, so no
+organization lookup or `--org-id` flag is needed. `report` shows the report
+window and signal totals in human mode. `findings` shows one row per finding
+group.
 
 These endpoints do not share the v1 envelope: report returns its own
 `{orgId,window,generatedAt,data}` envelope, while findings is the raw
@@ -418,14 +418,15 @@ These endpoints do not share the v1 envelope: report returns its own
 response without wrapping it. The HTML visualization and all v3 per-widget
 routes remain internal and are intentionally not CLI commands.
 
-| Flag | Type | Required | Description |
-|---|---|---|---|
-| `--org-id` | string | **yes** | Organization identifier from `ollygarden organization` |
-
 | Command | API |
 |---|---|
-| `magnolia report` | `GET /api/v2/magnolia/report?orgId=` |
-| `magnolia findings` | `GET /api/v2/magnolia/findings?orgId=` |
+| `analytics report` | `GET /api/v2/magnolia/report` |
+| `analytics findings` | `GET /api/v2/magnolia/findings` |
+
+The v0.5.0 forms `magnolia report --org-id ID` and
+`magnolia findings --org-id ID` remain hidden compatibility aliases. They send
+the legacy optional `orgId` query parameter, which Olive validates against the
+authenticated organization.
 
 ---
 
@@ -1116,8 +1117,8 @@ ollygarden rose executions instrument 22222222-2222-2222-2222-222222222222 --typ
 ollygarden update
 
 # 16. Read the latest automation-safe Magnolia artifacts
-ollygarden magnolia report --org-id org_abc123
-ollygarden magnolia findings --org-id org_abc123 --json | jq '.groups'
+ollygarden analytics report
+ollygarden analytics findings --json | jq '.groups'
 ```
 
 ## 10. Implementation Notes
