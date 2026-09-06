@@ -17,6 +17,11 @@ var analyticsCmd = &cobra.Command{
 	Short: "View analytics",
 }
 
+var apiKeysCmd = &cobra.Command{
+	Use:   "api-keys",
+	Short: "Manage API keys",
+}
+
 var webhooksCmd = &cobra.Command{
 	Use:   "webhooks",
 	Short: "Manage webhooks",
@@ -51,6 +56,7 @@ func init() {
 	rootCmd.AddCommand(servicesCmd)
 	rootCmd.AddCommand(insightsCmd)
 	rootCmd.AddCommand(analyticsCmd)
+	rootCmd.AddCommand(apiKeysCmd)
 	rootCmd.AddCommand(webhooksCmd)
 	webhooksCmd.AddCommand(webhooksDeliveriesCmd)
 	rootCmd.AddCommand(roseCmd)
