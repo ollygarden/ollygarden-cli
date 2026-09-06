@@ -126,6 +126,7 @@ func TestAPIKeysListAPIErrors(t *testing.T) {
 	}{
 		{status: http.StatusBadRequest, code: "INVALID_PARAMETERS", exit: 2},
 		{status: http.StatusUnauthorized, code: "INVALID_API_KEY", exit: 3},
+		{status: http.StatusNotFound, code: "NOT_FOUND", exit: 4},
 		{status: http.StatusTooManyRequests, code: "RATE_LIMIT_EXCEEDED", exit: 5},
 		{status: http.StatusInternalServerError, code: "INTERNAL_ERROR", exit: 6},
 	} {
