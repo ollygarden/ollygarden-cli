@@ -60,6 +60,7 @@ func TestHelpShowsCommandGroups(t *testing.T) {
 	assert.Contains(t, out, "services")
 	assert.Contains(t, out, "insights")
 	assert.Contains(t, out, "analytics")
+	assert.Contains(t, out, "api-keys")
 	assert.Contains(t, out, "webhooks")
 }
 

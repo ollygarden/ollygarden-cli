@@ -1,6 +1,6 @@
 # ollygarden
 
-CLI client for the OllyGarden REST API. Query services, insights, analytics, and manage webhooks from your terminal.
+CLI client for the OllyGarden REST API. Query services, insights, analytics, and manage API keys and webhooks from your terminal.
 
 This is the actively maintained public OllyGarden CLI. Repository-specific development and safety guidance lives in [AGENTS.md](AGENTS.md); contribution expectations are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -133,6 +133,8 @@ ollygarden auth logout --all --confirm       # remove everything
 
 ```bash
 ollygarden organization                        # your org tier, features, score
+ollygarden api-keys list                       # list active API keys (masked)
+ollygarden api-keys create --description "CI" # create a one-time API key
 ollygarden services list                       # all services
 ollygarden services get <service-id>           # single service details
 ollygarden insights list --status active       # active insights

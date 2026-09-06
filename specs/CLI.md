@@ -21,6 +21,9 @@ ollygarden
 ├── update                              # install latest stable CLI release
 ├── version                             # show CLI version and build info
 ├── organization                        # GET /organization
+├── api-keys
+│   ├── list                            # GET /api-keys
+│   └── create                          # POST /api-keys
 ├── services
 │   ├── list                            # GET /services
 │   ├── grouped                         # GET /services/grouped
@@ -163,6 +166,47 @@ ollygarden organization [flags]
 No additional flags. Returns org tier, features, and instrumentation score.
 
 | API | `GET /api/v1/organization` |
+|---|---|
+
+---
+
+### 3.6a `ollygarden api-keys list`
+
+```
+ollygarden api-keys list [flags]
+```
+
+| Flag | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `--limit` | int | 50 | no | Max items (1-100) |
+| `--offset` | int | 0 | no | Pagination offset |
+
+Human columns: `ID`, `DESCRIPTION`, `KEY` (masked preview), `CREATED`, and
+`LAST USED`. The response contains active keys only, newest first. Secret
+material is never returned by this operation.
+
+| API | `GET /api/v1/api-keys?limit=&offset=` |
+|---|---|
+
+---
+
+### 3.6b `ollygarden api-keys create`
+
+```
+ollygarden api-keys create --description <text>
+```
+
+| Flag | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `--description` | string | | **yes** | Key description, trimmed to 1-100 characters |
+
+The organization is derived from the current credential and cannot be selected
+by a flag. Human output includes the new plaintext key and a stderr warning
+that it cannot be retrieved again. `--json` returns Olive's untouched response
+envelope, including the one-time `data.key`. `--quiet` follows the global
+contract and suppresses all successful output, including the one-time key.
+
+| API | `POST /api/v1/api-keys` |
 |---|---|
 
 ---
@@ -1053,6 +1097,10 @@ ollygarden organization
 
 # 2. List first 10 services
 ollygarden services list --limit 10
+
+# 2b. List API keys and create a sibling key
+ollygarden api-keys list
+ollygarden api-keys create --description "CI telemetry"
 
 # 3. Search services in production, output as JSON
 ollygarden services search payment --environment production --json
