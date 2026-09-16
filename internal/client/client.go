@@ -16,6 +16,7 @@ type APIVersion string
 const (
 	V1 APIVersion = "v1"
 	V2 APIVersion = "v2"
+	V3 APIVersion = "v3"
 )
 
 // version is set by the cmd package at init time.
