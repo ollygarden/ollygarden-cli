@@ -25,7 +25,7 @@ To install manually, download a Windows zip from
 [releases](https://github.com/ollygarden/ollygarden-cli/releases/latest),
 extract it, and add its directory to your user `Path`.
 
-**From source** — `go install github.com/ollygarden/ollygarden-cli/cmd/ollygarden@latest` (reports version `dev`).
+**From source** — `go install github.com/ollygarden/ollygarden-cli/cmd/ollygarden@latest` (reports version `dev`). Source builds require access to the private `go.olly.garden` Go modules (set `GOPRIVATE=go.olly.garden/*` and configure git credentials for the OllyGarden GitHub organization); without that access, install a release binary instead.
 
 Both installers honor `OLLYGARDEN_VERSION` and `OLLYGARDEN_INSTALL_DIR`.
 
