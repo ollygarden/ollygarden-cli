@@ -6,14 +6,8 @@ import (
 
 	"github.com/ollygarden/ollygarden-cli/internal/output"
 	"github.com/spf13/cobra"
+	"go.olly.garden/magnolia/contract"
 )
-
-type traceRow struct {
-	TraceID      string `json:"trace_id"`
-	RootSpanName string `json:"root_span_name"`
-	ServiceName  string `json:"service_name"`
-	SpanCount    int64  `json:"span_count"`
-}
 
 var analyticsTracesCmd = &cobra.Command{
 	Use:   "traces",
@@ -25,7 +19,7 @@ var analyticsTracesCmd = &cobra.Command{
 }
 
 func renderTraces(f *output.Formatter, data json.RawMessage) error {
-	var rows []traceRow
+	var rows []contract.TraceRow
 	if err := json.Unmarshal(data, &rows); err != nil {
 		return fmt.Errorf("parsing traces: %w", err)
 	}

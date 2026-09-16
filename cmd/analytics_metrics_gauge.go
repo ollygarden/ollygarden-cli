@@ -6,20 +6,13 @@ import (
 
 	"github.com/ollygarden/ollygarden-cli/internal/output"
 	"github.com/spf13/cobra"
+	"go.olly.garden/magnolia/contract"
 )
 
-// metricRow is shared by the metrics-gauge, metrics-sum, and metrics-histogram
-// commands — the three endpoints return the same row shape.
-type metricRow struct {
-	MetricName        string  `json:"metric_name"`
-	ServiceName       string  `json:"service_name"`
-	Environment       string  `json:"environment"`
-	Datapoints        int64   `json:"datapoints"`
-	ValueDiversityPct float64 `json:"value_diversity_pct"`
-}
-
+// renderMetricRows is shared by the metrics-gauge, metrics-sum, and
+// metrics-histogram commands — the three endpoints return the same row shape.
 func renderMetricRows(f *output.Formatter, data json.RawMessage) error {
-	var rows []metricRow
+	var rows []contract.MetricRow
 	if err := json.Unmarshal(data, &rows); err != nil {
 		return fmt.Errorf("parsing metrics: %w", err)
 	}

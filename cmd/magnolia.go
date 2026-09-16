@@ -62,3 +62,14 @@ func runMagnoliaWidget(cmd *cobra.Command, path string, render func(f *output.Fo
 	})
 	return render(f, envelope.Data)
 }
+
+// formatCount renders contract.ServicesRow count pointers. The wire shape
+// omits the count families that don't belong to the widget being rendered, so
+// nil only appears for fields a command never puts in its table; "0" keeps
+// the column numeric if that ever changes.
+func formatCount(count *int64) string {
+	if count == nil {
+		return "0"
+	}
+	return fmt.Sprint(*count)
+}
