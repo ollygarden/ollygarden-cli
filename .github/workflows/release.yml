@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  GOPRIVATE: go.olly.garden/*
+
 jobs:
   goreleaser:
     runs-on: ubuntu-latest
@@ -22,6 +25,10 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+
+      - name: Setup access for private go modules
+        run: |
+          git config --global url."https://git:${{ secrets.GO_GITHUB_TOKEN }}@github.com".insteadOf "https://github.com"
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7

@@ -39,8 +39,18 @@ ollygarden
 ├── analytics
 │   ├── services                        # GET /analytics/services
 │   ├── log-volume                      # GET /analytics/log-volume
-│   ├── report                          # GET /api/v2/magnolia/report
-│   └── findings                        # GET /api/v2/magnolia/findings
+│   ├── summary                         # GET /api/v3/magnolia/summary
+│   ├── log-severities                  # GET /api/v3/magnolia/log-severities
+│   ├── log-duplication                 # GET /api/v3/magnolia/log-duplication
+│   ├── log-patterns                    # GET /api/v3/magnolia/log-patterns
+│   ├── span-names                      # GET /api/v3/magnolia/span-names
+│   ├── traces                          # GET /api/v3/magnolia/traces
+│   ├── service-traces                  # GET /api/v3/magnolia/service-traces
+│   ├── service-logs                    # GET /api/v3/magnolia/service-logs
+│   ├── service-metrics                 # GET /api/v3/magnolia/service-metrics
+│   ├── metrics-gauge                   # GET /api/v3/magnolia/metrics-gauge
+│   ├── metrics-sum                     # GET /api/v3/magnolia/metrics-sum
+│   └── metrics-histogram               # GET /api/v3/magnolia/metrics-histogram
 └── webhooks
     ├── list                            # GET /webhooks
     ├── create                          # POST /webhooks
@@ -443,34 +453,61 @@ Human mode prints the period and total record count followed by severity, record
 
 ---
 
-### 3.16a Analytics report commands
+### 3.16a Analytics widget commands
 
 ```bash
-ollygarden analytics report
-ollygarden analytics findings
+ollygarden analytics summary
+ollygarden analytics log-severities
+ollygarden analytics log-duplication
+ollygarden analytics log-patterns
+ollygarden analytics span-names
+ollygarden analytics traces
+ollygarden analytics service-traces
+ollygarden analytics service-logs
+ollygarden analytics service-metrics
+ollygarden analytics metrics-gauge
+ollygarden analytics metrics-sum
+ollygarden analytics metrics-histogram
 ```
 
-Both commands use the authenticated, organization-scoped API-key automation
-contract on API v2. Olive derives the organization from authentication, so no
-organization lookup or `--org-id` flag is needed. `report` shows the report
-window and signal totals in human mode. `findings` shows one row per finding
-group.
+These commands read the Magnolia per-widget analytics on API v3. Each widget
+is precomputed once per sampler run, so responses describe the organization's
+most recent run rather than live data. Olive derives the organization from
+authentication, so no organization lookup or `--org-id` flag is needed, and
+the CLI never sends the legacy `orgId` query parameter. The server-side
+`limit` parameter is deprecated and ignored, so no `--limit` flag exists on
+these commands.
 
-These endpoints do not share the v1 envelope: report returns its own
-`{orgId,window,generatedAt,data}` envelope, while findings is the raw
-`{run,summary,findings,groups}` artifact. Consequently `--json` preserves each
-response without wrapping it. The HTML visualization and all v3 per-widget
-routes remain internal and are intentionally not CLI commands.
+The endpoints do not share the v1 envelope: every widget returns
+`{orgId,runDate,generatedAt,data}`, where `data` is the widget-specific
+payload. `--json` preserves the envelope without wrapping it. In human mode
+each command prints the envelope header as key-value pairs (Organization, Run
+date, Generated) followed by the widget payload: tables for row-shaped
+widgets, key-value pairs for `summary` and `log-duplication`.
 
 | Command | API |
 |---|---|
-| `analytics report` | `GET /api/v2/magnolia/report` |
-| `analytics findings` | `GET /api/v2/magnolia/findings` |
+| `analytics summary` | `GET /api/v3/magnolia/summary` |
+| `analytics log-severities` | `GET /api/v3/magnolia/log-severities` |
+| `analytics log-duplication` | `GET /api/v3/magnolia/log-duplication` |
+| `analytics log-patterns` | `GET /api/v3/magnolia/log-patterns` |
+| `analytics span-names` | `GET /api/v3/magnolia/span-names` |
+| `analytics traces` | `GET /api/v3/magnolia/traces` |
+| `analytics service-traces` | `GET /api/v3/magnolia/service-traces` |
+| `analytics service-logs` | `GET /api/v3/magnolia/service-logs` |
+| `analytics service-metrics` | `GET /api/v3/magnolia/service-metrics` |
+| `analytics metrics-gauge` | `GET /api/v3/magnolia/metrics-gauge` |
+| `analytics metrics-sum` | `GET /api/v3/magnolia/metrics-sum` |
+| `analytics metrics-histogram` | `GET /api/v3/magnolia/metrics-histogram` |
 
-The v0.5.0 forms `magnolia report --org-id ID` and
-`magnolia findings --org-id ID` remain hidden compatibility aliases. They send
-the legacy optional `orgId` query parameter, which Olive validates against the
-authenticated organization.
+A 404 `REPORT_NOT_READY` means no widget results exist for the organization
+yet (or none at the schema version the server reads); it maps to exit code 4
+like any other not-found error.
+
+The v2 commands `analytics report` and `analytics findings`, and the v0.5.0
+hidden aliases `magnolia report` / `magnolia findings`, were removed when the
+API surface moved to v3. Findings have no v3 endpoint yet and are not
+available from the CLI until one ships.
 
 ---
 
@@ -1164,15 +1201,15 @@ ollygarden rose executions instrument 22222222-2222-2222-2222-222222222222 --typ
 # 15. Install the latest stable CLI release when one is available
 ollygarden update
 
-# 16. Read the latest automation-safe Magnolia artifacts
-ollygarden analytics report
-ollygarden analytics findings --json | jq '.groups'
+# 16. Read the latest automation-safe Magnolia widgets
+ollygarden analytics summary
+ollygarden analytics traces --json | jq '.data'
 ```
 
 ## 10. Implementation Notes
 
 - **Language**: Go with Cobra
-- **API base path**: `/api/v1` by default; Magnolia artifact commands explicitly select `/api/v2`
+- **API base path**: `/api/v1` by default; Magnolia widget commands explicitly select `/api/v3`
 - **Auth token format**: `og_sk_{6char}_{32hex}`
 - **Rate limit**: 60 req/min per key
 - **Response envelope**: `{data, meta{timestamp, total, has_more, trace_id}, links}`

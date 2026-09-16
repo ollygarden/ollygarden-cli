@@ -34,7 +34,7 @@ golangci-lint run
 - Shared logic lives in `internal/`: HTTP client (`internal/client/`), output formatter (`internal/output/`), auth (`internal/auth/`).
 - Use `spf13/cobra` for command registration. Every command must set `Use`, `Short`, `Args`, and `RunE`.
 - Keep command files thin: parse flags → call client → format output → handle errors. No business logic in `cmd/`.
-- API response types are currently hand-defined inline in each command file (e.g., `insightDetail`, `insightSummaryDetail`). A future improvement is to generate them from `https://api.ollygarden.cloud/openapi.json` via `oapi-codegen`.
+- API response types are currently hand-defined inline in each command file (e.g., `insightDetail`, `insightSummaryDetail`). Exception: the magnolia widget row shapes come from `go.olly.garden/magnolia/contract`, the wire contract shared with the producer, so they cannot drift from the API. A future improvement is to generate the remaining types from `https://api.ollygarden.cloud/openapi.json` via `oapi-codegen`.
 
 ## HTTP Client
 
