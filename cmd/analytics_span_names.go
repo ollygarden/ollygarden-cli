@@ -33,9 +33,9 @@ func renderSpanNames(f *output.Formatter, data json.RawMessage) error {
 	}
 	table := make([][]string, len(rows))
 	for i, row := range rows {
-		table[i] = []string{row.ServiceName, row.SpanKind, row.SpanName, row.Environment, fmt.Sprint(row.Count)}
+		table[i] = []string{row.ServiceName, row.SpanKind, row.SpanName, row.ServiceNamespace, row.Environment, fmt.Sprint(row.Count)}
 	}
-	f.PrintTable([]string{"SERVICE", "KIND", "NAME", "ENVIRONMENT", "COUNT"}, table)
+	f.PrintTable([]string{"SERVICE", "KIND", "NAME", "NAMESPACE", "ENVIRONMENT", "COUNT"}, table)
 	return nil
 }
 

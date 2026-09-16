@@ -17,6 +17,7 @@ func TestAnalyticsSpanNamesHumanAndV3PathWithoutOrgQuery(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Contains(t, out, "org_test")
 	assert.Contains(t, out, "POST /pay")
+	assert.Contains(t, out, "shop")
 	assert.Contains(t, out, "77")
 }
 
