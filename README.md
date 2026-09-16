@@ -157,6 +157,32 @@ ollygarden webhooks create --name alerts \
 
 Every command supports `--help` for full flag details.
 
+## Analytics Widgets
+
+The `analytics` group also reads OllyGarden's Magnolia telemetry analysis:
+per-widget answers precomputed once per sampler run and served by the v3 API.
+The organization is resolved from your authentication, and results describe
+the most recent completed run (the `Run date` in the output), not live data.
+
+```bash
+ollygarden analytics summary            # per-signal totals and service counts
+ollygarden analytics log-severities     # log records by severity and environment
+ollygarden analytics log-duplication    # total vs unique log bodies, dedup potential
+ollygarden analytics log-patterns       # most frequent normalized log bodies
+ollygarden analytics span-names         # span counts by service, kind, and name
+ollygarden analytics traces             # largest traces by span count
+ollygarden analytics service-traces     # span and trace counts per service
+ollygarden analytics service-logs       # log record counts per service
+ollygarden analytics service-metrics    # metric datapoints per service by instrument type
+ollygarden analytics metrics-gauge      # gauge metrics with value diversity
+ollygarden analytics metrics-sum        # sum metrics with value diversity
+ollygarden analytics metrics-histogram  # histogram metrics with value diversity
+```
+
+Until your organization's first sampler run completes, these commands exit
+with code 4 and `report not ready`. With `--json` each command prints the
+widget envelope (`orgId`, `runDate`, `generatedAt`, `data`) unmodified.
+
 ## Output Modes
 
 ```bash
