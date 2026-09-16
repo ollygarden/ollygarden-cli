@@ -9,6 +9,13 @@ on:
 permissions:
   contents: read
 
+# go.olly.garden modules resolve to private repositories: GOPRIVATE skips the
+# public proxy and checksum database, and the git insteadOf rewrite injects
+# the org token. Fork PRs don't receive secrets, so their runs fail at module
+# download — accepted trade-off of the private dependency.
+env:
+  GOPRIVATE: go.olly.garden/*
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,6 +28,10 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+
+      - name: Setup access for private go modules
+        run: |
+          git config --global url."https://git:${{ secrets.GO_GITHUB_TOKEN }}@github.com".insteadOf "https://github.com"
 
       - name: Build
         run: go build ./...
@@ -43,6 +54,10 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Setup access for private go modules
+        run: |
+          git config --global url."https://git:${{ secrets.GO_GITHUB_TOKEN }}@github.com".insteadOf "https://github.com"
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
@@ -61,6 +76,10 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+
+      - name: Setup access for private go modules
+        run: |
+          git config --global url."https://git:${{ secrets.GO_GITHUB_TOKEN }}@github.com".insteadOf "https://github.com"
 
       - name: Build release snapshot
         uses: goreleaser/goreleaser-action@v7

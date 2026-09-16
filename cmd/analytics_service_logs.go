@@ -6,14 +6,8 @@ import (
 
 	"github.com/ollygarden/ollygarden-cli/internal/output"
 	"github.com/spf13/cobra"
+	"go.olly.garden/magnolia/contract"
 )
-
-type serviceLogsRow struct {
-	ServiceName      string `json:"service_name"`
-	ServiceNamespace string `json:"service_namespace"`
-	Environment      string `json:"environment"`
-	LogCount         int64  `json:"log_count"`
-}
 
 var analyticsServiceLogsCmd = &cobra.Command{
 	Use:   "service-logs",
@@ -25,13 +19,13 @@ var analyticsServiceLogsCmd = &cobra.Command{
 }
 
 func renderServiceLogs(f *output.Formatter, data json.RawMessage) error {
-	var rows []serviceLogsRow
+	var rows []contract.ServicesRow
 	if err := json.Unmarshal(data, &rows); err != nil {
 		return fmt.Errorf("parsing service logs: %w", err)
 	}
 	table := make([][]string, len(rows))
 	for i, row := range rows {
-		table[i] = []string{row.ServiceName, row.ServiceNamespace, row.Environment, fmt.Sprint(row.LogCount)}
+		table[i] = []string{row.ServiceName, row.ServiceNamespace, row.Environment, formatCount(row.LogCount)}
 	}
 	f.PrintTable([]string{"SERVICE", "NAMESPACE", "ENVIRONMENT", "LOGS"}, table)
 	return nil

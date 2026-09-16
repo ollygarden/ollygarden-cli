@@ -6,15 +6,8 @@ import (
 
 	"github.com/ollygarden/ollygarden-cli/internal/output"
 	"github.com/spf13/cobra"
+	"go.olly.garden/magnolia/contract"
 )
-
-type logPatternRow struct {
-	ServiceName  string `json:"ServiceName"`
-	SeverityText string `json:"SeverityText"`
-	Environment  string `json:"environment"`
-	BodyPreview  string `json:"body_preview"`
-	Count        int64  `json:"cnt"`
-}
 
 var analyticsLogPatternsCmd = &cobra.Command{
 	Use:   "log-patterns",
@@ -26,13 +19,13 @@ var analyticsLogPatternsCmd = &cobra.Command{
 }
 
 func renderLogPatterns(f *output.Formatter, data json.RawMessage) error {
-	var rows []logPatternRow
+	var rows []contract.LogPatternRow
 	if err := json.Unmarshal(data, &rows); err != nil {
 		return fmt.Errorf("parsing log patterns: %w", err)
 	}
 	table := make([][]string, len(rows))
 	for i, row := range rows {
-		table[i] = []string{row.ServiceName, row.SeverityText, row.Environment, fmt.Sprint(row.Count), row.BodyPreview}
+		table[i] = []string{row.ServiceName, row.SeverityText, row.Environment, fmt.Sprint(row.Cnt), row.BodyPreview}
 	}
 	f.PrintTable([]string{"SERVICE", "SEVERITY", "ENVIRONMENT", "COUNT", "PREVIEW"}, table)
 	return nil

@@ -6,16 +6,8 @@ import (
 
 	"github.com/ollygarden/ollygarden-cli/internal/output"
 	"github.com/spf13/cobra"
+	"go.olly.garden/magnolia/contract"
 )
-
-type serviceMetricsRow struct {
-	ServiceName         string `json:"service_name"`
-	Environment         string `json:"environment"`
-	Datapoints          int64  `json:"datapoints"`
-	GaugeDatapoints     int64  `json:"gauge_datapoints"`
-	SumDatapoints       int64  `json:"sum_datapoints"`
-	HistogramDatapoints int64  `json:"histogram_datapoints"`
-}
 
 var analyticsServiceMetricsCmd = &cobra.Command{
 	Use:   "service-metrics",
@@ -27,7 +19,7 @@ var analyticsServiceMetricsCmd = &cobra.Command{
 }
 
 func renderServiceMetrics(f *output.Formatter, data json.RawMessage) error {
-	var rows []serviceMetricsRow
+	var rows []contract.ServicesRow
 	if err := json.Unmarshal(data, &rows); err != nil {
 		return fmt.Errorf("parsing service metrics: %w", err)
 	}
@@ -36,10 +28,10 @@ func renderServiceMetrics(f *output.Formatter, data json.RawMessage) error {
 		table[i] = []string{
 			row.ServiceName,
 			row.Environment,
-			fmt.Sprint(row.Datapoints),
-			fmt.Sprint(row.GaugeDatapoints),
-			fmt.Sprint(row.SumDatapoints),
-			fmt.Sprint(row.HistogramDatapoints),
+			formatCount(row.Datapoints),
+			formatCount(row.GaugeDatapoints),
+			formatCount(row.SumDatapoints),
+			formatCount(row.HistogramDatapoints),
 		}
 	}
 	f.PrintTable([]string{"SERVICE", "ENVIRONMENT", "DATAPOINTS", "GAUGE", "SUM", "HISTOGRAM"}, table)

@@ -6,15 +6,8 @@ import (
 
 	"github.com/ollygarden/ollygarden-cli/internal/output"
 	"github.com/spf13/cobra"
+	"go.olly.garden/magnolia/contract"
 )
-
-type serviceTracesRow struct {
-	ServiceName      string `json:"service_name"`
-	ServiceNamespace string `json:"service_namespace"`
-	Environment      string `json:"environment"`
-	SpanCount        int64  `json:"span_count"`
-	TraceCount       int64  `json:"trace_count"`
-}
 
 var analyticsServiceTracesCmd = &cobra.Command{
 	Use:   "service-traces",
@@ -26,13 +19,13 @@ var analyticsServiceTracesCmd = &cobra.Command{
 }
 
 func renderServiceTraces(f *output.Formatter, data json.RawMessage) error {
-	var rows []serviceTracesRow
+	var rows []contract.ServicesRow
 	if err := json.Unmarshal(data, &rows); err != nil {
 		return fmt.Errorf("parsing service traces: %w", err)
 	}
 	table := make([][]string, len(rows))
 	for i, row := range rows {
-		table[i] = []string{row.ServiceName, row.ServiceNamespace, row.Environment, fmt.Sprint(row.SpanCount), fmt.Sprint(row.TraceCount)}
+		table[i] = []string{row.ServiceName, row.ServiceNamespace, row.Environment, formatCount(row.SpanCount), formatCount(row.TraceCount)}
 	}
 	f.PrintTable([]string{"SERVICE", "NAMESPACE", "ENVIRONMENT", "SPANS", "TRACES"}, table)
 	return nil

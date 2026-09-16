@@ -6,13 +6,8 @@ import (
 
 	"github.com/ollygarden/ollygarden-cli/internal/output"
 	"github.com/spf13/cobra"
+	"go.olly.garden/magnolia/contract"
 )
-
-type logSeverityRow struct {
-	SeverityText string `json:"SeverityText"`
-	Environment  string `json:"environment"`
-	Count        int64  `json:"cnt"`
-}
 
 var analyticsLogSeveritiesCmd = &cobra.Command{
 	Use:   "log-severities",
@@ -24,13 +19,13 @@ var analyticsLogSeveritiesCmd = &cobra.Command{
 }
 
 func renderLogSeverities(f *output.Formatter, data json.RawMessage) error {
-	var rows []logSeverityRow
+	var rows []contract.LogSeverityRow
 	if err := json.Unmarshal(data, &rows); err != nil {
 		return fmt.Errorf("parsing log severities: %w", err)
 	}
 	table := make([][]string, len(rows))
 	for i, row := range rows {
-		table[i] = []string{row.SeverityText, row.Environment, fmt.Sprint(row.Count)}
+		table[i] = []string{row.SeverityText, row.Environment, fmt.Sprint(row.Cnt)}
 	}
 	f.PrintTable([]string{"SEVERITY", "ENVIRONMENT", "COUNT"}, table)
 	return nil
