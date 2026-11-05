@@ -146,6 +146,7 @@ type ResponseMeta struct {
 	TraceID           string `json:"trace_id,omitempty"`
 	NextCursor        string `json:"next_cursor,omitempty"`
 	SnapshotExpiresAt string `json:"snapshot_expires_at,omitempty"`
+	Capped            bool   `json:"capped,omitempty"`
 }
 
 type ErrorResponse struct {

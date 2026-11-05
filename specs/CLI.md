@@ -35,7 +35,8 @@ ollygarden
 ├── insights
 │   ├── list                            # GET /insights
 │   ├── get <id>                        # GET /insights/{id}
-│   └── summary <id>                    # GET /insights/{id}/summary
+│   ├── summary <id>                    # GET /insights/{id}/summary
+│   └── counts                          # GET /insights/summary
 ├── analytics
 │   ├── services                        # GET /analytics/services
 │   ├── log-volume                      # GET /analytics/log-volume
@@ -431,6 +432,41 @@ ollygarden insights summary <insight-id>
 Returns an AI-generated summary for the insight. The summary includes contextual explanation of why the insight matters, its specific impact, and a recommended next step. Summaries are cached; on cache miss, a new one is generated via Lotus.
 
 | API | `GET /api/v1/insights/{id}/summary` |
+|---|---|
+
+---
+
+### 3.15a `ollygarden insights counts`
+
+```
+ollygarden insights counts --group-by <field> [flags]
+```
+
+An aggregate count, not a list: `--limit`/`--offset` do not apply, and human
+mode never counts rows client-side, so a bounded page can't be presented as
+a total.
+
+| Flag | Type | Default | Required | Description |
+|---|---|---|---|---|
+| `--group-by` | string | | **yes** | `insight_type`, `service`, or `impact` |
+| `--service-id` | UUID | | no | Filter by service |
+| `--status` | string | | no | Comma-separated: `active`, `archived`, `muted` |
+| `--insight-type` | string | | no | 1-100 comma-separated exact insight type names (each 1-128 characters) |
+| `--signal-type` | string | | no | `trace`, `metric`, `log`, `resource` |
+| `--impact` | string | | no | Comma-separated: `Critical`, `Important`, `Normal`, `Low` |
+| `--date-from` | RFC3339 | | no | Filter `created_at` >= this date |
+| `--date-to` | RFC3339 | | no | Filter `created_at` <= this date |
+
+Every filter flag is identical to `insights list`'s and is forwarded as-is, so
+the same filtered question returns the same population through either
+command. Human mode prints a two-column table: the group key (header names
+the `--group-by` field: `TYPE`, `SERVICE`, or `IMPACT`) and `COUNT`, ordered
+by count descending as returned by the API. When `meta.capped` is true the
+API truncated at the group cap; human mode prints a stderr warning so a
+truncated count is never mistaken for a total. `--json` passes through the
+full envelope, including `capped`, unchanged.
+
+| API | `GET /api/v1/insights/summary?group_by=&service_id=&status=&insight_type=&signal_type=&impact=&date_from=&date_to=` |
 |---|---|
 
 ---
@@ -1165,6 +1201,9 @@ ollygarden insights get a1b2c3d4-5678-90ab-cdef-111111111111 --json | jq '.data.
 
 # 6b. Get AI-generated summary for an insight
 ollygarden insights summary a1b2c3d4-5678-90ab-cdef-111111111111
+
+# 6c. Count active critical insights by service, without paging through them
+ollygarden insights counts --group-by service --status active --impact Critical
 
 # 7. Create a webhook (disabled by default), test it, then enable
 ollygarden webhooks create \
