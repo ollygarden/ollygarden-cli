@@ -83,27 +83,7 @@ func runInsightsList(cmd *cobra.Command, args []string) error {
 	query.Set("limit", strconv.Itoa(insightsListLimit))
 	query.Set("offset", strconv.Itoa(insightsListOffset))
 	query.Set("sort", insightsListSort)
-	if insightsListServiceID != "" {
-		query.Set("service_id", insightsListServiceID)
-	}
-	if insightsListStatus != "" {
-		query.Set("status", insightsListStatus)
-	}
-	if insightsListInsightType != "" {
-		query.Set("insight_type", insightsListInsightType)
-	}
-	if insightsListSignalType != "" {
-		query.Set("signal_type", insightsListSignalType)
-	}
-	if insightsListImpact != "" {
-		query.Set("impact", insightsListImpact)
-	}
-	if insightsListDateFrom != "" {
-		query.Set("date_from", insightsListDateFrom)
-	}
-	if insightsListDateTo != "" {
-		query.Set("date_to", insightsListDateTo)
-	}
+	insightsListFilters().applyQuery(query)
 	insightsListSnapshot.apply(query)
 
 	var insights []insightsListItem
@@ -189,12 +169,38 @@ func runInsightsList(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func validateInsightsListFilters() error {
-	if !csvValuesAllowed(insightsListStatus, "active", "archived", "muted") {
+// insightsFilterFlags holds the filter flags shared by every command that
+// queries the insights collection (list, and the group-by aggregate). Each
+// command owns its own cobra flag variables and builds one of these to reuse
+// validation and query-building instead of duplicating both.
+type insightsFilterFlags struct {
+	serviceID   string
+	status      string
+	insightType string
+	signalType  string
+	impact      string
+	dateFrom    string
+	dateTo      string
+}
+
+func insightsListFilters() insightsFilterFlags {
+	return insightsFilterFlags{
+		serviceID:   insightsListServiceID,
+		status:      insightsListStatus,
+		insightType: insightsListInsightType,
+		signalType:  insightsListSignalType,
+		impact:      insightsListImpact,
+		dateFrom:    insightsListDateFrom,
+		dateTo:      insightsListDateTo,
+	}
+}
+
+func (f insightsFilterFlags) validate() error {
+	if !csvValuesAllowed(f.status, "active", "archived", "muted") {
 		return fmt.Errorf("--status must contain only: active, archived, muted")
 	}
-	if insightsListInsightType != "" {
-		types := strings.Split(insightsListInsightType, ",")
+	if f.insightType != "" {
+		types := strings.Split(f.insightType, ",")
 		if len(types) > 100 {
 			return fmt.Errorf("--insight-type must contain between 1 and 100 values")
 		}
@@ -205,25 +211,56 @@ func validateInsightsListFilters() error {
 			}
 		}
 	}
-	if !csvValuesAllowed(insightsListImpact, "Critical", "Important", "Normal", "Low") {
+	if !csvValuesAllowed(f.impact, "Critical", "Important", "Normal", "Low") {
 		return fmt.Errorf("--impact must contain only: Critical, Important, Normal, Low")
 	}
-	if insightsListSignalType != "" && insightsListSignalType != "trace" && insightsListSignalType != "metric" && insightsListSignalType != "log" && insightsListSignalType != "resource" {
+	if f.signalType != "" && f.signalType != "trace" && f.signalType != "metric" && f.signalType != "log" && f.signalType != "resource" {
 		return fmt.Errorf("--signal-type must be one of: trace, metric, log, resource")
 	}
-	for flag, value := range map[string]string{"--date-from": insightsListDateFrom, "--date-to": insightsListDateTo} {
+	for flag, value := range map[string]string{"--date-from": f.dateFrom, "--date-to": f.dateTo} {
 		if value != "" {
 			if _, err := time.Parse(time.RFC3339, value); err != nil {
 				return fmt.Errorf("%s must be RFC3339", flag)
 			}
 		}
 	}
-	if insightsListDateFrom != "" && insightsListDateTo != "" {
-		from, _ := time.Parse(time.RFC3339, insightsListDateFrom)
-		to, _ := time.Parse(time.RFC3339, insightsListDateTo)
+	if f.dateFrom != "" && f.dateTo != "" {
+		from, _ := time.Parse(time.RFC3339, f.dateFrom)
+		to, _ := time.Parse(time.RFC3339, f.dateTo)
 		if from.After(to) {
 			return fmt.Errorf("--date-from must not be after --date-to")
 		}
+	}
+	return nil
+}
+
+func (f insightsFilterFlags) applyQuery(query url.Values) {
+	if f.serviceID != "" {
+		query.Set("service_id", f.serviceID)
+	}
+	if f.status != "" {
+		query.Set("status", f.status)
+	}
+	if f.insightType != "" {
+		query.Set("insight_type", f.insightType)
+	}
+	if f.signalType != "" {
+		query.Set("signal_type", f.signalType)
+	}
+	if f.impact != "" {
+		query.Set("impact", f.impact)
+	}
+	if f.dateFrom != "" {
+		query.Set("date_from", f.dateFrom)
+	}
+	if f.dateTo != "" {
+		query.Set("date_to", f.dateTo)
+	}
+}
+
+func validateInsightsListFilters() error {
+	if err := insightsListFilters().validate(); err != nil {
+		return err
 	}
 	sortField := insightsListSort
 	if strings.HasPrefix(sortField, "+") || strings.HasPrefix(sortField, "-") {
