@@ -36,7 +36,7 @@ ollygarden
 │   ├── list                            # GET /insights
 │   ├── get <id>                        # GET /insights/{id}
 │   ├── summary <id>                    # GET /insights/{id}/summary
-│   └── counts                          # GET /insights/summary
+│   └── counts                          # GET /insights/counts
 ├── analytics
 │   ├── services                        # GET /analytics/services
 │   ├── log-volume                      # GET /analytics/log-volume
@@ -466,7 +466,7 @@ API truncated at the group cap; human mode prints a stderr warning so a
 truncated count is never mistaken for a total. `--json` passes through the
 full envelope, including `capped`, unchanged.
 
-| API | `GET /api/v1/insights/summary?group_by=&service_id=&status=&insight_type=&signal_type=&impact=&date_from=&date_to=` |
+| API | `GET /api/v1/insights/counts?group_by=&service_id=&status=&insight_type=&signal_type=&impact=&date_from=&date_to=` |
 |---|---|
 
 ---

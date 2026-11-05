@@ -83,7 +83,7 @@ func runInsightsCounts(cmd *cobra.Command, args []string) error {
 	query.Set("group_by", insightsCountsGroupBy)
 	insightsCountsFilters().applyQuery(query)
 
-	resp, err := c.Get(cmd.Context(), "/insights/summary", query)
+	resp, err := c.Get(cmd.Context(), "/insights/counts", query)
 	if err != nil {
 		return fmt.Errorf("requesting insight counts: %w", err)
 	}

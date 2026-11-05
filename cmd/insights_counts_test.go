@@ -48,7 +48,7 @@ func TestInsightsCountsGroupByValues(t *testing.T) {
 		t.Run(tt.groupBy, func(t *testing.T) {
 			body := countsResponse(`{"key":"a","count":3},{"key":"b","count":1}`, false)
 			setupInsightsCountsServer(t, func(w http.ResponseWriter, r *http.Request) {
-				assert.Equal(t, "/api/v1/insights/summary", r.URL.Path)
+				assert.Equal(t, "/api/v1/insights/counts", r.URL.Path)
 				assert.Equal(t, tt.groupBy, r.URL.Query().Get("group_by"))
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(body))
