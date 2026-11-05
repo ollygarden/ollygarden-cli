@@ -33,6 +33,7 @@ type insightsListItem struct {
 	Status      string              `json:"status"`
 	ServiceName string              `json:"service_name"`
 	InsightType *insightTypeCompact `json:"insight_type"`
+	CreatedAt   string              `json:"created_at"`
 	DetectedTS  string              `json:"detected_ts"`
 }
 
@@ -52,9 +53,9 @@ func init() {
 	insightsListCmd.Flags().StringVar(&insightsListInsightType, "insight-type", "", "Filter by exact insight type names (comma-separated, 1-100 values, each 1-128 characters)")
 	insightsListCmd.Flags().StringVar(&insightsListSignalType, "signal-type", "", "Filter by signal type (trace, metric, log)")
 	insightsListCmd.Flags().StringVar(&insightsListImpact, "impact", "", "Filter by impact (comma-separated: Critical, Important, Normal, Low)")
-	insightsListCmd.Flags().StringVar(&insightsListDateFrom, "date-from", "", "Filter from date (RFC3339)")
-	insightsListCmd.Flags().StringVar(&insightsListDateTo, "date-to", "", "Filter to date (RFC3339)")
-	insightsListCmd.Flags().StringVar(&insightsListSort, "sort", "-detected_ts", "Sort field (prefix +/- for asc/desc: detected_ts, created_at, updated_at, impact, signal_type)")
+	insightsListCmd.Flags().StringVar(&insightsListDateFrom, "date-from", "", "Filter created_at >= this date (RFC3339)")
+	insightsListCmd.Flags().StringVar(&insightsListDateTo, "date-to", "", "Filter created_at <= this date (RFC3339)")
+	insightsListCmd.Flags().StringVar(&insightsListSort, "sort", "-created_at", "Sort field (prefix +/- for asc/desc: detected_ts, created_at, updated_at, impact, signal_type)")
 	insightsListCmd.Flags().BoolVar(&insightsListSnapshot.enabled, "snapshot", false, "Start a mutation-stable snapshot")
 	insightsListCmd.Flags().StringVar(&insightsListSnapshot.cursor, "cursor", "", "Continue with an opaque snapshot cursor")
 	insightsListCmd.Flags().BoolVar(&insightsListSnapshot.all, "all", false, "Read all pages from one mutation-stable snapshot")
@@ -161,7 +162,9 @@ func runInsightsList(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	headers := []string{"ID", "TYPE", "IMPACT", "SIGNAL", "SERVICE", "DETECTED"}
+	// CREATED is what --date-from/--date-to and the default sort act on, so it must be visible.
+	// DETECTED stays too: it answers a different question, when the problem was observed.
+	headers := []string{"ID", "TYPE", "IMPACT", "SIGNAL", "SERVICE", "CREATED", "DETECTED"}
 	rows := make([][]string, len(insights))
 	for i, ins := range insights {
 		displayName := "\u2014"
@@ -172,7 +175,7 @@ func runInsightsList(cmd *cobra.Command, args []string) error {
 			impact = ins.InsightType.Impact
 			signalType = ins.InsightType.SignalType
 		}
-		rows[i] = []string{ins.ID, displayName, impact, signalType, ins.ServiceName, ins.DetectedTS}
+		rows[i] = []string{ins.ID, displayName, impact, signalType, ins.ServiceName, ins.CreatedAt, ins.DetectedTS}
 	}
 
 	f.PrintTable(headers, rows)

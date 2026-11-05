@@ -40,10 +40,10 @@ func setupInsightsListServer(t *testing.T, handler http.HandlerFunc) {
 	})
 }
 
-func insightsListItemJSON(id, status, serviceName, displayName, impact, signalType, detectedTS string) string {
+func insightsListItemJSON(id, status, serviceName, displayName, impact, signalType, createdAt, detectedTS string) string {
 	return `{"id":"` + id + `","status":"` + status + `","service_name":"` + serviceName +
 		`","insight_type":{"display_name":"` + displayName + `","impact":"` + impact +
-		`","signal_type":"` + signalType + `"},"detected_ts":"` + detectedTS + `"}`
+		`","signal_type":"` + signalType + `"},"created_at":"` + createdAt + `","detected_ts":"` + detectedTS + `"}`
 }
 
 func orgInsightsListResponse(insights string, total int, hasMore bool) string {
@@ -52,14 +52,16 @@ func orgInsightsListResponse(insights string, total int, hasMore bool) string {
 }
 
 func TestInsightsListHuman(t *testing.T) {
-	i1 := insightsListItemJSON("ins-1", "active", "my-service", "High Error Rate", "Critical", "trace", "2026-02-19T10:00:00Z")
-	i2 := insightsListItemJSON("ins-2", "active", "other-svc", "Slow Response", "Normal", "metric", "2026-02-19T09:00:00Z")
+	// created_at and detected_ts deliberately differ by days, like real data,
+	// so the test can tell the two columns apart in the rendered table.
+	i1 := insightsListItemJSON("ins-1", "active", "my-service", "High Error Rate", "Critical", "trace", "2026-02-12T10:00:00Z", "2026-02-19T10:00:00Z")
+	i2 := insightsListItemJSON("ins-2", "active", "other-svc", "Slow Response", "Normal", "metric", "2026-02-13T09:00:00Z", "2026-02-19T09:00:00Z")
 	body := orgInsightsListResponse(i1+","+i2, 2, false)
 
 	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/api/v1/insights", r.URL.Path)
 		assert.Equal(t, "GET", r.Method)
-		assert.Equal(t, "-detected_ts", r.URL.Query().Get("sort"))
+		assert.Equal(t, "-created_at", r.URL.Query().Get("sort"))
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(body))
 	})
@@ -76,10 +78,32 @@ func TestInsightsListHuman(t *testing.T) {
 	assert.Contains(t, out, "metric")
 	assert.Contains(t, out, "my-service")
 	assert.Contains(t, out, "other-svc")
+	assert.Contains(t, out, "CREATED")
+	assert.Contains(t, out, "DETECTED")
+	assert.Contains(t, out, "2026-02-12T10:00:00Z")
+	assert.Contains(t, out, "2026-02-19T10:00:00Z")
+}
+
+func TestInsightsListDateFromFilterOrderedByCreatedAt(t *testing.T) {
+	// --date-from narrows on created_at server-side; the default sort must use
+	// the same column or the listing would be ordered by a field the filter ignores.
+	i1 := insightsListItemJSON("ins-1", "active", "my-service", "High Error Rate", "Critical", "trace", "2026-02-18T00:00:00Z", "2026-02-10T00:00:00Z")
+	body := orgInsightsListResponse(i1, 1, false)
+
+	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		assert.Equal(t, "2026-02-15T00:00:00Z", q.Get("date_from"))
+		assert.Equal(t, "-created_at", q.Get("sort"))
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(body))
+	})
+
+	_, _, err := executeCommand("insights", "list", "--date-from", "2026-02-15T00:00:00Z")
+	require.NoError(t, err)
 }
 
 func TestInsightsListJSON(t *testing.T) {
-	i1 := insightsListItemJSON("ins-1", "active", "my-service", "High Error Rate", "Critical", "trace", "2026-02-19T10:00:00Z")
+	i1 := insightsListItemJSON("ins-1", "active", "my-service", "High Error Rate", "Critical", "trace", "2026-02-15T00:00:00Z", "2026-02-19T10:00:00Z")
 	body := orgInsightsListResponse(i1, 1, false)
 
 	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
@@ -177,7 +201,7 @@ func TestInsightsListCursorOffsetRejectedBeforeRequest(t *testing.T) {
 }
 
 func TestInsightsListQuiet(t *testing.T) {
-	i1 := insightsListItemJSON("ins-1", "active", "my-service", "High Error Rate", "Critical", "trace", "2026-02-19T10:00:00Z")
+	i1 := insightsListItemJSON("ins-1", "active", "my-service", "High Error Rate", "Critical", "trace", "2026-02-15T00:00:00Z", "2026-02-19T10:00:00Z")
 	body := orgInsightsListResponse(i1, 1, false)
 
 	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
@@ -191,7 +215,7 @@ func TestInsightsListQuiet(t *testing.T) {
 }
 
 func TestInsightsListFilterFlags(t *testing.T) {
-	i1 := insightsListItemJSON("ins-1", "active", "my-service", "High Error Rate", "Critical", "trace", "2026-02-19T10:00:00Z")
+	i1 := insightsListItemJSON("ins-1", "active", "my-service", "High Error Rate", "Critical", "trace", "2026-02-15T00:00:00Z", "2026-02-19T10:00:00Z")
 	body := orgInsightsListResponse(i1, 1, false)
 
 	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
@@ -222,7 +246,7 @@ func TestInsightsListFilterFlags(t *testing.T) {
 }
 
 func TestInsightsListPagination(t *testing.T) {
-	i1 := insightsListItemJSON("ins-1", "active", "my-service", "High Error Rate", "Critical", "trace", "2026-02-19T10:00:00Z")
+	i1 := insightsListItemJSON("ins-1", "active", "my-service", "High Error Rate", "Critical", "trace", "2026-02-15T00:00:00Z", "2026-02-19T10:00:00Z")
 	body := orgInsightsListResponse(i1, 100, true)
 
 	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
