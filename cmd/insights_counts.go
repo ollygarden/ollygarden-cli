@@ -22,10 +22,22 @@ var (
 )
 
 // insightsCountGroup is one row of the group-by aggregate: a group key and
-// how many insights matched the filters within that group.
+// how many insights matched the filters within that group. Label is only
+// populated for --group-by service (the key there is a UUID); insight_type
+// and impact have no separate display name, so the key is already readable.
 type insightsCountGroup struct {
 	Key   string `json:"key"`
+	Label string `json:"label,omitempty"`
 	Count int    `json:"count"`
+}
+
+// displayKey returns the human-readable group value: the label when the API
+// sent one, otherwise the key. Never synthesize a label.
+func (g insightsCountGroup) displayKey() string {
+	if g.Label != "" {
+		return g.Label
+	}
+	return g.Key
 }
 
 // countsGroupByHeader names the human-mode column for each --group-by value,
@@ -111,7 +123,7 @@ func runInsightsCounts(cmd *cobra.Command, args []string) error {
 
 	rows := make([][]string, len(groups))
 	for i, g := range groups {
-		rows[i] = []string{g.Key, fmt.Sprintf("%d", g.Count)}
+		rows[i] = []string{g.displayKey(), fmt.Sprintf("%d", g.Count)}
 	}
 	f.PrintTable([]string{header, "COUNT"}, rows)
 

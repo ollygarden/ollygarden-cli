@@ -66,6 +66,35 @@ func TestInsightsCountsGroupByValues(t *testing.T) {
 	}
 }
 
+func TestInsightsCountsServiceGroupShowsLabel(t *testing.T) {
+	body := countsResponse(`{"key":"3f9a1c9e-1111-4a2b-9c3d-abcdef012345","label":"checkout-api","count":7}`, false)
+	setupInsightsCountsServer(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(body))
+	})
+
+	out, _, err := executeCommand("insights", "counts", "--group-by", "service")
+	require.NoError(t, err)
+	assert.Contains(t, out, "checkout-api")
+	assert.NotContains(t, out, "3f9a1c9e-1111-4a2b-9c3d-abcdef012345")
+}
+
+func TestInsightsCountsNonServiceGroupShowsKey(t *testing.T) {
+	for _, groupBy := range []string{"insight_type", "impact"} {
+		t.Run(groupBy, func(t *testing.T) {
+			body := countsResponse(`{"key":"Critical","count":4}`, false)
+			setupInsightsCountsServer(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(body))
+			})
+
+			out, _, err := executeCommand("insights", "counts", "--group-by", groupBy)
+			require.NoError(t, err)
+			assert.Contains(t, out, "Critical")
+		})
+	}
+}
+
 func TestInsightsCountsFiltersForwarded(t *testing.T) {
 	body := countsResponse(`{"key":"trace","count":2}`, false)
 	setupInsightsCountsServer(t, func(w http.ResponseWriter, r *http.Request) {

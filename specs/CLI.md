@@ -461,10 +461,15 @@ Every filter flag is identical to `insights list`'s and is forwarded as-is, so
 the same filtered question returns the same population through either
 command. Human mode prints a two-column table: the group key (header names
 the `--group-by` field: `TYPE`, `SERVICE`, or `IMPACT`) and `COUNT`, ordered
-by count descending as returned by the API. When `meta.capped` is true the
-API truncated at the group cap; human mode prints a stderr warning so a
-truncated count is never mistaken for a total. `--json` passes through the
-full envelope, including `capped`, unchanged.
+by count descending as returned by the API. For `--group-by service`, the
+key column shows the service's `label` (its name) rather than its UUID;
+`insight_type` and `impact` have no `label`, so the key is shown as-is. A
+name is not guaranteed unique across namespaces, so two rows can legitimately
+show the same name with different counts — use `--json` to recover the
+underlying UUID. When `meta.capped` is true the API truncated at the group
+cap; human mode prints a stderr warning so a truncated count is never
+mistaken for a total. `--json` passes through the full envelope, including
+`capped`, unchanged.
 
 | API | `GET /api/v1/insights/counts?group_by=&service_id=&status=&insight_type=&signal_type=&impact=&date_from=&date_to=` |
 |---|---|
