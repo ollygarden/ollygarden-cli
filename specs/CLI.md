@@ -376,13 +376,19 @@ ollygarden insights list [flags]
 | `--insight-type` | string | | no | 1-100 comma-separated exact insight type names (each 1-128 characters) |
 | `--signal-type` | string | | no | `trace`, `metric`, `log` |
 | `--impact` | string | | no | Comma-separated: `Critical`, `Important`, `Normal`, `Low` |
-| `--date-from` | RFC3339 | | no | Filter created_at >= |
-| `--date-to` | RFC3339 | | no | Filter created_at <= |
-| `--sort` | string | `-detected_ts` | no | Prefix `+`/`-` for ASC/DESC. Fields: `detected_ts`, `created_at`, `updated_at`, `impact`, `signal_type` |
+| `--date-from` | RFC3339 | | no | Filter `created_at` >= this date |
+| `--date-to` | RFC3339 | | no | Filter `created_at` <= this date |
+| `--sort` | string | `-created_at` | no | Prefix `+`/`-` for ASC/DESC. Fields: `detected_ts`, `created_at`, `updated_at`, `impact`, `signal_type` |
 | `--snapshot` | bool | false | no | Start a mutation-stable snapshot |
 | `--cursor` | string | | no | Continue with Olive's opaque cursor and the same filters/sort |
 | `--all` | bool | false | no | Read every page from one snapshot in human or quiet mode |
 | `--max-pages` | int | 0 | no | With `--all`, stop after N pages and release the unfinished snapshot; 0 means unlimited |
+
+Human columns: `ID`, `TYPE`, `IMPACT`, `SIGNAL`, `SERVICE`, `CREATED`, `DETECTED`.
+`CREATED` is `created_at`, the column `--date-from`/`--date-to` filter and the
+default sort order on. `DETECTED` is `detected_ts`, when the problem was
+observed, which can differ from `created_at` by several days and is kept for
+that reason.
 
 | API | `GET /api/v1/insights?limit=&offset=&service_id=&status=&insight_type=&signal_type=&impact=&date_from=&date_to=&sort=&snapshot=&cursor=`; bounded scans release with `DELETE /api/v1/insights/snapshot` |
 |---|---|
