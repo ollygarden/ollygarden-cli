@@ -51,7 +51,7 @@ func init() {
 	insightsListCmd.Flags().StringVar(&insightsListServiceID, "service-id", "", "Filter by service ID")
 	insightsListCmd.Flags().StringVar(&insightsListStatus, "status", "", "Filter by status (comma-separated: active, archived, muted)")
 	insightsListCmd.Flags().StringVar(&insightsListInsightType, "insight-type", "", "Filter by exact insight type names (comma-separated, 1-100 values, each 1-128 characters)")
-	insightsListCmd.Flags().StringVar(&insightsListSignalType, "signal-type", "", "Filter by signal type (trace, metric, log)")
+	insightsListCmd.Flags().StringVar(&insightsListSignalType, "signal-type", "", "Filter by signal type (trace, metric, log, resource). Each names where the finding lives in the OTLP model, not which signal carried the evidence: a resource-attribute finding is always \"resource\", even if what it describes is a metric.")
 	insightsListCmd.Flags().StringVar(&insightsListImpact, "impact", "", "Filter by impact (comma-separated: Critical, Important, Normal, Low)")
 	insightsListCmd.Flags().StringVar(&insightsListDateFrom, "date-from", "", "Filter created_at >= this date (RFC3339)")
 	insightsListCmd.Flags().StringVar(&insightsListDateTo, "date-to", "", "Filter created_at <= this date (RFC3339)")
@@ -208,8 +208,8 @@ func validateInsightsListFilters() error {
 	if !csvValuesAllowed(insightsListImpact, "Critical", "Important", "Normal", "Low") {
 		return fmt.Errorf("--impact must contain only: Critical, Important, Normal, Low")
 	}
-	if insightsListSignalType != "" && insightsListSignalType != "trace" && insightsListSignalType != "metric" && insightsListSignalType != "log" {
-		return fmt.Errorf("--signal-type must be one of: trace, metric, log")
+	if insightsListSignalType != "" && insightsListSignalType != "trace" && insightsListSignalType != "metric" && insightsListSignalType != "log" && insightsListSignalType != "resource" {
+		return fmt.Errorf("--signal-type must be one of: trace, metric, log, resource")
 	}
 	for flag, value := range map[string]string{"--date-from": insightsListDateFrom, "--date-to": insightsListDateTo} {
 		if value != "" {

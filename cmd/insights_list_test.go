@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/ollygarden/ollygarden-cli/internal/client"
+	"github.com/ollygarden/ollygarden-cli/internal/exitcode"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -192,6 +194,36 @@ func TestInsightsListSnapshotErrors(t *testing.T) {
 			assert.Contains(t, stderr, tt.detail)
 		})
 	}
+}
+
+func TestInsightsListInvalidSignalTypeExitCode(t *testing.T) {
+	// Pre-HTTP flag validation across this codebase returns a plain error, which
+	// handleRootErr maps to exitcode.General (1), not exitcode.Usage (2) as
+	// AGENTS.md's exit-code table describes. That gap predates this change and
+	// spans every list command's flag validation, not just --signal-type, so
+	// fixing it here would be a wider behavior change than this PR's scope.
+	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) { t.Fatal("unexpected request") })
+	_, _, err := executeCommand("insights", "list", "--signal-type", "span")
+	require.Error(t, err)
+
+	var stderr bytes.Buffer
+	code := handleRootErr(err, &stderr)
+	assert.Equal(t, exitcode.General, code)
+}
+
+func TestInsightsListSignalTypeResourceAccepted(t *testing.T) {
+	i1 := insightsListItemJSON("ins-1", "active", "my-service", "Missing Service Name", "Normal", "resource", "2026-02-15T00:00:00Z", "2026-02-19T10:00:00Z")
+	body := orgInsightsListResponse(i1, 1, false)
+
+	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "resource", r.URL.Query().Get("signal_type"))
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(body))
+	})
+
+	out, _, err := executeCommand("insights", "list", "--signal-type", "resource")
+	require.NoError(t, err)
+	assert.Contains(t, out, "resource")
 }
 
 func TestInsightsListCursorOffsetRejectedBeforeRequest(t *testing.T) {

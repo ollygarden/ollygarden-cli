@@ -374,7 +374,7 @@ ollygarden insights list [flags]
 | `--service-id` | UUID | | no | Filter by service |
 | `--status` | string | | no | Comma-separated: `active`, `archived`, `muted` |
 | `--insight-type` | string | | no | 1-100 comma-separated exact insight type names (each 1-128 characters) |
-| `--signal-type` | string | | no | `trace`, `metric`, `log` |
+| `--signal-type` | string | | no | `trace`, `metric`, `log`, `resource` |
 | `--impact` | string | | no | Comma-separated: `Critical`, `Important`, `Normal`, `Low` |
 | `--date-from` | RFC3339 | | no | Filter `created_at` >= this date |
 | `--date-to` | RFC3339 | | no | Filter `created_at` <= this date |
@@ -389,6 +389,12 @@ Human columns: `ID`, `TYPE`, `IMPACT`, `SIGNAL`, `SERVICE`, `CREATED`, `DETECTED
 default sort order on. `DETECTED` is `detected_ts`, when the problem was
 observed, which can differ from `created_at` by several days and is kept for
 that reason.
+
+`--signal-type` values name *where* the finding lives in the OTLP model, not
+which signal carried the evidence: a resource-attribute finding is always
+`resource`, even when what it describes is a metric or a log. Filtering on
+`metric` will not return it, so an empty `--signal-type metric` result does
+not mean there are no metric-related problems.
 
 | API | `GET /api/v1/insights?limit=&offset=&service_id=&status=&insight_type=&signal_type=&impact=&date_from=&date_to=&sort=&snapshot=&cursor=`; bounded scans release with `DELETE /api/v1/insights/snapshot` |
 |---|---|
