@@ -163,8 +163,7 @@ func runInsightsList(cmd *cobra.Command, args []string) error {
 	}
 
 	// CREATED is what --date-from/--date-to and the default sort act on, so it must be visible.
-	// DETECTED stays too: it answers a different question, when the problem was observed.
-	headers := []string{"ID", "TYPE", "IMPACT", "SIGNAL", "SERVICE", "CREATED", "DETECTED"}
+	headers := []string{"ID", "TYPE", "IMPACT", "SIGNAL", "SERVICE", "CREATED"}
 	rows := make([][]string, len(insights))
 	for i, ins := range insights {
 		displayName := "\u2014"
@@ -175,7 +174,7 @@ func runInsightsList(cmd *cobra.Command, args []string) error {
 			impact = ins.InsightType.Impact
 			signalType = ins.InsightType.SignalType
 		}
-		rows[i] = []string{ins.ID, displayName, impact, signalType, ins.ServiceName, ins.CreatedAt, ins.DetectedTS}
+		rows[i] = []string{ins.ID, displayName, impact, signalType, ins.ServiceName, ins.CreatedAt}
 	}
 
 	f.PrintTable(headers, rows)

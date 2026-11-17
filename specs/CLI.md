@@ -384,11 +384,10 @@ ollygarden insights list [flags]
 | `--all` | bool | false | no | Read every page from one snapshot in human or quiet mode |
 | `--max-pages` | int | 0 | no | With `--all`, stop after N pages and release the unfinished snapshot; 0 means unlimited |
 
-Human columns: `ID`, `TYPE`, `IMPACT`, `SIGNAL`, `SERVICE`, `CREATED`, `DETECTED`.
+Human columns: `ID`, `TYPE`, `IMPACT`, `SIGNAL`, `SERVICE`, `CREATED`.
 `CREATED` is `created_at`, the column `--date-from`/`--date-to` filter and the
-default sort order on. `DETECTED` is `detected_ts`, when the problem was
-observed, which can differ from `created_at` by several days and is kept for
-that reason.
+default sort order on. `detected_ts`, when the problem was observed, can
+differ from `created_at` by several days and stays available in JSON output.
 
 | API | `GET /api/v1/insights?limit=&offset=&service_id=&status=&insight_type=&signal_type=&impact=&date_from=&date_to=&sort=&snapshot=&cursor=`; bounded scans release with `DELETE /api/v1/insights/snapshot` |
 |---|---|

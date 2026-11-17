@@ -79,9 +79,9 @@ func TestInsightsListHuman(t *testing.T) {
 	assert.Contains(t, out, "my-service")
 	assert.Contains(t, out, "other-svc")
 	assert.Contains(t, out, "CREATED")
-	assert.Contains(t, out, "DETECTED")
+	assert.NotContains(t, out, "DETECTED")
 	assert.Contains(t, out, "2026-02-12T10:00:00Z")
-	assert.Contains(t, out, "2026-02-19T10:00:00Z")
+	assert.NotContains(t, out, "2026-02-19T10:00:00Z")
 }
 
 func TestInsightsListDateFromFilterOrderedByCreatedAt(t *testing.T) {
