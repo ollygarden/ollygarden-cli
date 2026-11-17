@@ -1,6 +1,12 @@
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	"slices"
+
+	"github.com/spf13/cobra"
+)
+
+var roseInstrumentationTypes = []string{"minimum", "general"}
 
 var roseExecutionsInstrumentationType string
 
@@ -18,7 +24,7 @@ var roseExecutionsInstrumentCmd = &cobra.Command{
 		if err := validateRoseRepositoryID(f, args[0]); err != nil {
 			return err
 		}
-		if roseExecutionsInstrumentationType != "minimum" && roseExecutionsInstrumentationType != "general" {
+		if !slices.Contains(roseInstrumentationTypes, roseExecutionsInstrumentationType) {
 			return roseInvalidParameters(f, "--type must be one of: minimum, general")
 		}
 		response, err := rosePost(cmd.Context(), f, "/rose/codebase/instrumentation/execute", roseInstrumentationExecutionRequest{RepositoryID: args[0], Type: roseExecutionsInstrumentationType})

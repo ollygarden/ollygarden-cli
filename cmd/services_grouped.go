@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -25,6 +26,8 @@ var (
 	servicesGroupedOrder          string
 	servicesGroupedSnapshot       snapshotFlags
 )
+
+var servicesGroupedOrders = []string{"asc", "desc"}
 
 var allowedSorts = map[string]bool{
 	"insights-first": true,
@@ -226,7 +229,7 @@ func validateServicesGroupedIdentityFlags(cmd *cobra.Command, effectiveSort stri
 	if cmd.Flags().Changed("min-score") && cmd.Flags().Changed("max-score") && servicesGroupedMinScore > servicesGroupedMaxScore {
 		return fmt.Errorf("--min-score must not exceed --max-score")
 	}
-	if servicesGroupedOrder != "" && servicesGroupedOrder != "asc" && servicesGroupedOrder != "desc" {
+	if servicesGroupedOrder != "" && !slices.Contains(servicesGroupedOrders, servicesGroupedOrder) {
 		return fmt.Errorf("--order must be one of: asc, desc")
 	}
 	for flag, value := range map[string]string{

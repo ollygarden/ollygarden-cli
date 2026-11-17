@@ -51,6 +51,10 @@ material agent involvement in the pull request description.
    golangci-lint run
    ```
 
+   `cmd/testdata/olive-openapi.json` pins Olive's OpenAPI document so a test can
+   compare flag values with it. Refresh it with `go generate ./cmd` and review
+   any test failure that follows.
+
 ## Pull request expectations
 
 - Explain user-visible behavior, output, exit-code, or compatibility changes.
