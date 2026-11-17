@@ -84,22 +84,34 @@ func TestInsightsListHuman(t *testing.T) {
 	assert.NotContains(t, out, "2026-02-19T10:00:00Z")
 }
 
-func TestInsightsListDateFromFilterOrderedByCreatedAt(t *testing.T) {
-	// --date-from narrows on created_at server-side; the default sort must use
+func TestInsightsListDateFiltersOrderedByCreatedAt(t *testing.T) {
+	// The date flags narrow on created_at server-side; the default sort must use
 	// the same column or the listing would be ordered by a field the filter ignores.
 	i1 := insightsListItemJSON("ins-1", "active", "my-service", "High Error Rate", "Critical", "trace", "2026-02-18T00:00:00Z", "2026-02-10T00:00:00Z")
 	body := orgInsightsListResponse(i1, 1, false)
 
-	setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
-		q := r.URL.Query()
-		assert.Equal(t, "2026-02-15T00:00:00Z", q.Get("date_from"))
-		assert.Equal(t, "-created_at", q.Get("sort"))
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(body))
-	})
+	tests := []struct {
+		name  string
+		flag  string
+		param string
+	}{
+		{"date-from", "--date-from", "date_from"},
+		{"date-to", "--date-to", "date_to"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setupInsightsListServer(t, func(w http.ResponseWriter, r *http.Request) {
+				q := r.URL.Query()
+				assert.Equal(t, "2026-02-15T00:00:00Z", q.Get(tt.param))
+				assert.Equal(t, "-created_at", q.Get("sort"))
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(body))
+			})
 
-	_, _, err := executeCommand("insights", "list", "--date-from", "2026-02-15T00:00:00Z")
-	require.NoError(t, err)
+			_, _, err := executeCommand("insights", "list", tt.flag, "2026-02-15T00:00:00Z")
+			require.NoError(t, err)
+		})
+	}
 }
 
 func TestInsightsListJSON(t *testing.T) {
