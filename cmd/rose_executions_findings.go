@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"net/url"
+	"slices"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -41,14 +42,10 @@ func runRoseExecutionsFindings(cmd *cobra.Command, args []string) error {
 	if roseExecutionsFindingsPage < 1 {
 		return roseInvalidParameters(f, "--page must be >= 1")
 	}
-	switch roseExecutionsFindingsStatus {
-	case "active", "resolved", "all":
-	default:
+	if !slices.Contains(roseFindingStatuses, roseExecutionsFindingsStatus) {
 		return roseInvalidParameters(f, "--status must be one of: active, resolved, all")
 	}
-	switch roseExecutionsFindingsDismissed {
-	case "false", "true", "all":
-	default:
+	if !slices.Contains(roseDismissedFilters, roseExecutionsFindingsDismissed) {
 		return roseInvalidParameters(f, "--dismissed must be one of: false, true, all")
 	}
 

@@ -32,6 +32,11 @@ type roseListEnvelope struct {
 
 const emDash = "—"
 
+var (
+	roseFindingStatuses  = []string{"active", "resolved", "all"}
+	roseDismissedFilters = []string{"false", "true", "all"}
+)
+
 var roseUUIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 var roseFindingIDPattern = regexp.MustCompile(`^otel-[0-9a-fA-F]{12}$`)
 

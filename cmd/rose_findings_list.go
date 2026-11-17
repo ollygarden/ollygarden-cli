@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 
 	"github.com/ollygarden/ollygarden-cli/internal/output"
@@ -59,14 +60,10 @@ func runRoseFindingsList(cmd *cobra.Command, args []string) error {
 	if roseFindingsListPage < 1 {
 		return roseInvalidParameters(f, "--page must be >= 1")
 	}
-	switch roseFindingsListStatus {
-	case "active", "resolved", "all":
-	default:
+	if !slices.Contains(roseFindingStatuses, roseFindingsListStatus) {
 		return roseInvalidParameters(f, "--status must be one of: active, resolved, all")
 	}
-	switch roseFindingsListDismissed {
-	case "false", "true", "all":
-	default:
+	if !slices.Contains(roseDismissedFilters, roseFindingsListDismissed) {
 		return roseInvalidParameters(f, "--dismissed must be one of: false, true, all")
 	}
 	if !roseCSVValuesAllowed(roseFindingsListSeverity, "critical", "high", "medium", "low", "suggestion") {
