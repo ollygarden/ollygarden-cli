@@ -616,6 +616,10 @@ ollygarden webhooks test <webhook-id>
 | API | `POST /api/v1/webhooks/{webhook_id}/test` |
 |---|---|
 
+Human output shows `Success` and `Status Code`. Redirects are not followed, so a 3xx is shown as-is with `Success: false`. When the endpoint sent no response, `Status Code` is `0` and, when the API reports why, the output adds an `Error` row with its category (`blocked_destination`, `timeout`, `tls_error`, or `connection_failed`) and, for those known categories, a one-line `Hint` row. An unknown category is shown without a hint.
+
+A delivery-level failure (`Success: false`) is a result, not a CLI error: the command exits `0`; scripts can check `--json` output with `jq -e .data.success`. When the stored URL is malformed or names a blocked host, the API rejects the request with HTTP 400 before connecting, and the command prints the API error and exits `2`. `--json` prints the API envelope unchanged.
+
 ---
 
 ### 3.23 `ollygarden webhooks deliveries list`

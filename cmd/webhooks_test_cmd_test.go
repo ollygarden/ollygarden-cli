@@ -15,14 +15,12 @@ func setupWebhooksTestServer(t *testing.T, handler http.HandlerFunc) {
 	setupAPIServer(t, handler)
 }
 
-func webhookTestSuccessResponse() string {
-	return `{"data":{"success":true,"status_code":200,"response_body":"OK"},` +
-		`"meta":{"timestamp":"2026-02-19T10:00:00Z","trace_id":"trace-test"}}`
+func webhookTestResponseBody(data string) string {
+	return `{"data":` + data + `,"meta":{"timestamp":"2026-02-19T10:00:00Z","trace_id":"trace-test"}}`
 }
 
-func webhookTestFailureResponse() string {
-	return `{"data":{"success":false,"status_code":500,"response_body":"Internal Server Error"},` +
-		`"meta":{"timestamp":"2026-02-19T10:00:00Z","trace_id":"trace-test-fail"}}`
+func webhookTestSuccessResponse() string {
+	return webhookTestResponseBody(`{"success":true,"status_code":200}`)
 }
 
 func TestWebhooksTestHuman(t *testing.T) {
@@ -35,15 +33,14 @@ func TestWebhooksTestHuman(t *testing.T) {
 
 	out, _, err := executeCommand("webhooks", "test", "wh-123")
 	require.NoError(t, err)
-	assert.Contains(t, out, "true")
-	assert.Contains(t, out, "200")
-	assert.Contains(t, out, "OK")
+	assert.Equal(t, "Success:      true\nStatus Code:  200\n", out)
 }
 
 func TestWebhooksTestJSON(t *testing.T) {
+	data := `{"success":false,"status_code":0,"error":"timeout"}`
 	setupWebhooksTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(webhookTestSuccessResponse()))
+		w.Write([]byte(webhookTestResponseBody(data)))
 	})
 
 	out, _, err := executeCommand("webhooks", "test", "wh-123", "--json")
@@ -52,7 +49,7 @@ func TestWebhooksTestJSON(t *testing.T) {
 	var envelope client.APIResponse
 	require.NoError(t, json.Unmarshal([]byte(out), &envelope))
 	assert.Equal(t, "trace-test", envelope.Meta.TraceID)
-	assert.Contains(t, string(envelope.Data), "true")
+	assert.JSONEq(t, data, string(envelope.Data))
 }
 
 func TestWebhooksTestQuiet(t *testing.T) {
@@ -66,17 +63,65 @@ func TestWebhooksTestQuiet(t *testing.T) {
 	assert.Empty(t, out)
 }
 
-func TestWebhooksTestFailureResult(t *testing.T) {
-	setupWebhooksTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(webhookTestFailureResponse()))
-	})
+func TestWebhooksTestResults(t *testing.T) {
+	tests := []struct {
+		name string
+		data string
+		want string
+	}{
+		{
+			name: "non-2xx status",
+			data: `{"success":false,"status_code":500}`,
+			want: "Success:      false\nStatus Code:  500\n",
+		},
+		{
+			name: "redirect reported as-is",
+			data: `{"success":false,"status_code":302}`,
+			want: "Success:      false\nStatus Code:  302\n",
+		},
+		{
+			name: "blocked destination",
+			data: `{"success":false,"status_code":0,"error":"blocked_destination"}`,
+			want: "Success:      false\nStatus Code:  0\nError:        blocked_destination\n" +
+				"Hint:         The URL must resolve to a public address and must not point at OllyGarden hosts.\n",
+		},
+		{
+			name: "timeout",
+			data: `{"success":false,"status_code":0,"error":"timeout"}`,
+			want: "Success:      false\nStatus Code:  0\nError:        timeout\n" +
+				"Hint:         The endpoint did not respond in time. Check that it is reachable.\n",
+		},
+		{
+			name: "tls error",
+			data: `{"success":false,"status_code":0,"error":"tls_error"}`,
+			want: "Success:      false\nStatus Code:  0\nError:        tls_error\n" +
+				"Hint:         The TLS handshake failed. Check the endpoint's certificate.\n",
+		},
+		{
+			name: "connection failed",
+			data: `{"success":false,"status_code":0,"error":"connection_failed"}`,
+			want: "Success:      false\nStatus Code:  0\nError:        connection_failed\n" +
+				"Hint:         Could not connect. Check the endpoint's host and port.\n",
+		},
+		{
+			name: "unknown category without hint",
+			data: `{"success":false,"status_code":0,"error":"dns_failure"}`,
+			want: "Success:      false\nStatus Code:  0\nError:        dns_failure\n",
+		},
+	}
 
-	out, _, err := executeCommand("webhooks", "test", "wh-123")
-	require.NoError(t, err)
-	assert.Contains(t, out, "false")
-	assert.Contains(t, out, "500")
-	assert.Contains(t, out, "Internal Server Error")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setupWebhooksTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(webhookTestResponseBody(tt.data)))
+			})
+
+			out, _, err := executeCommand("webhooks", "test", "wh-123")
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, out)
+		})
+	}
 }
 
 func TestWebhooksTest404(t *testing.T) {
