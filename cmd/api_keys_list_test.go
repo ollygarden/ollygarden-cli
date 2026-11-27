@@ -12,7 +12,6 @@ import (
 
 func setupAPIKeysListServer(t *testing.T, handler http.HandlerFunc) {
 	t.Helper()
-	resetHelpFlag(t, apiKeysListCmd)
 	oldLimit := apiKeysListLimit
 	oldOffset := apiKeysListOffset
 	setupAPIServer(t, handler)

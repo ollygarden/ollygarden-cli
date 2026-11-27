@@ -14,6 +14,7 @@ import (
 	"github.com/ollygarden/ollygarden-cli/internal/config"
 	"github.com/ollygarden/ollygarden-cli/internal/exitcode"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,12 +23,55 @@ func executeCommand(args ...string) (string, string, error) {
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
 
+	// rootCmd is a package global; undo flag state parsed during this run.
+	restore := saveFlagState(rootCmd)
+	defer restore()
+
 	rootCmd.SetOut(stdout)
 	rootCmd.SetErr(stderr)
 	rootCmd.SetArgs(args)
 
 	err := rootCmd.Execute()
 	return stdout.String(), stderr.String(), err
+}
+
+type flagState struct {
+	flag    *pflag.Flag
+	value   string
+	slice   []string
+	changed bool
+}
+
+// saveFlagState records every flag in cmd's tree and returns a function that
+// restores them. Slice flags need Replace because Set appends.
+func saveFlagState(cmd *cobra.Command) func() {
+	var states []flagState
+	var walk func(*cobra.Command)
+	walk = func(c *cobra.Command) {
+		c.InitDefaultHelpFlag()
+		c.LocalFlags().VisitAll(func(f *pflag.Flag) {
+			st := flagState{flag: f, value: f.Value.String(), changed: f.Changed}
+			if sv, ok := f.Value.(pflag.SliceValue); ok {
+				st.slice = append([]string(nil), sv.GetSlice()...)
+			}
+			states = append(states, st)
+		})
+		for _, child := range c.Commands() {
+			walk(child)
+		}
+	}
+	walk(cmd)
+
+	return func() {
+		for _, st := range states {
+			if sv, ok := st.flag.Value.(pflag.SliceValue); ok {
+				_ = sv.Replace(st.slice)
+			} else {
+				_ = st.flag.Value.Set(st.value)
+			}
+			st.flag.Changed = st.changed
+		}
+	}
 }
 
 func setupAPIServer(t *testing.T, handler http.HandlerFunc) {
@@ -245,7 +289,6 @@ func TestHandleRootErr_APIErrorNotPrintedTwice(t *testing.T) {
 		w.WriteHeader(http.StatusUnauthorized)
 		_, _ = w.Write([]byte(body))
 	})
-	resetHelpFlag(t, organizationCmd)
 
 	_, stderr, runErr := executeCommand("organization")
 	require.Error(t, runErr)
@@ -259,18 +302,6 @@ func TestHandleRootErr_APIErrorNotPrintedTwice(t *testing.T) {
 	full := stderrBuf.String()
 	assert.Equal(t, 1, strings.Count(full, "Invalid API key"),
 		"APIError message must appear exactly once on stderr; got:\n%s", full)
-}
-
-// resetHelpFlag clears a sticky --help flag on the given command. Cobra
-// retains flag.Changed across rootCmd.Execute() invocations, so a prior
-// test that ran "<cmd> --help" makes subsequent runs of "<cmd>" silently
-// re-trigger help instead of executing RunE.
-func resetHelpFlag(t *testing.T, cmd *cobra.Command) {
-	t.Helper()
-	if f := cmd.Flags().Lookup("help"); f != nil {
-		f.Changed = false
-		_ = f.Value.Set("false")
-	}
 }
 
 func TestHandleRootErr_NilReturnsSuccess(t *testing.T) {
