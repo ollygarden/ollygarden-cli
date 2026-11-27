@@ -14,9 +14,6 @@ import (
 func setupWebhooksDeleteServer(t *testing.T, handler http.HandlerFunc) {
 	t.Helper()
 
-	// Reset cobra flag state that persists across Execute() calls
-	webhooksDeleteCmd.Flags().Set("help", "false")
-
 	oldIsTerminal := stdinIsTerminal
 	oldReader := stdinReader
 	setupAPIServer(t, handler)

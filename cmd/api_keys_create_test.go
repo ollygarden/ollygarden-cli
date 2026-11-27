@@ -16,7 +16,6 @@ const createdAPIKeySecret = "og_sk_Ab3xYz_0123456789abcdef0123456789abcdef"
 
 func setupAPIKeysCreateServer(t *testing.T, handler http.HandlerFunc) {
 	t.Helper()
-	resetHelpFlag(t, apiKeysCreateCmd)
 	oldDescription := apiKeysCreateDescription
 	setupAPIServer(t, handler)
 	t.Cleanup(func() {

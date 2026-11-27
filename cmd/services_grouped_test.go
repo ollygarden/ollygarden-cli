@@ -11,41 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupServicesGroupedServer(t *testing.T, handler http.HandlerFunc) {
-	t.Helper()
-	oldLimit := servicesGroupedLimit
-	oldOffset := servicesGroupedOffset
-	oldSort := servicesGroupedSort
-	oldQuery := servicesGroupedQuery
-	oldView := servicesGroupedView
-	oldEnvironment := servicesGroupedEnvironment
-	oldMinScore := servicesGroupedMinScore
-	oldMaxScore := servicesGroupedMaxScore
-	oldHasInsightType := servicesGroupedHasInsightType
-	oldOrder := servicesGroupedOrder
-	oldSnapshot := servicesGroupedSnapshot
-	for _, name := range []string{"sort", "query", "view", "environment", "min-score", "max-score", "has-insight-type", "order", "snapshot", "cursor", "all", "max-pages"} {
-		servicesGroupedCmd.Flags().Lookup(name).Changed = false
-	}
-	setupAPIServer(t, handler)
-	t.Cleanup(func() {
-		servicesGroupedLimit = oldLimit
-		servicesGroupedOffset = oldOffset
-		servicesGroupedSort = oldSort
-		servicesGroupedQuery = oldQuery
-		servicesGroupedView = oldView
-		servicesGroupedEnvironment = oldEnvironment
-		servicesGroupedMinScore = oldMinScore
-		servicesGroupedMaxScore = oldMaxScore
-		servicesGroupedHasInsightType = oldHasInsightType
-		servicesGroupedOrder = oldOrder
-		servicesGroupedSnapshot = oldSnapshot
-		for _, name := range []string{"sort", "query", "view", "environment", "min-score", "max-score", "has-insight-type", "order", "snapshot", "cursor", "all", "max-pages"} {
-			servicesGroupedCmd.Flags().Lookup(name).Changed = false
-		}
-	})
-}
-
 func groupedServiceJSON(name, env string, versionCount, insightsCount int, score *int) string {
 	s := `{"name":"` + name + `","environment":"` + env + `","namespace":"default","latest_id":"aaa-111","version_count":` + itoa(versionCount) + `,"insights_count":` + itoa(insightsCount)
 	if score != nil {
@@ -67,7 +32,7 @@ func TestServicesGroupedHuman(t *testing.T) {
 	s2 := groupedServiceJSON("auth-service", "staging", 1, 0, intPtr(42))
 	body := groupedListResponse(s1+","+s2, 2, false)
 
-	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/api/v1/services/grouped", r.URL.Path)
 		assert.Equal(t, "GET", r.Method)
 		w.WriteHeader(http.StatusOK)
@@ -90,7 +55,7 @@ func TestServicesGroupedJSON(t *testing.T) {
 	s1 := groupedServiceJSON("api-gateway", "production", 3, 5, intPtr(85))
 	body := groupedListResponse(s1, 1, false)
 
-	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(body))
 	})
@@ -105,7 +70,7 @@ func TestServicesGroupedJSON(t *testing.T) {
 }
 
 func TestServicesGroupedServiceViewStartsSnapshot(t *testing.T) {
-	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "service", r.URL.Query().Get("view"))
 		assert.Equal(t, "true", r.URL.Query().Get("snapshot"))
 		assert.Equal(t, "score", r.URL.Query().Get("sort"))
@@ -120,7 +85,7 @@ func TestServicesGroupedQuiet(t *testing.T) {
 	s1 := groupedServiceJSON("api-gateway", "production", 3, 5, intPtr(85))
 	body := groupedListResponse(s1, 1, false)
 
-	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(body))
 	})
@@ -134,7 +99,7 @@ func TestServicesGroupedPagination(t *testing.T) {
 	s1 := groupedServiceJSON("api-gateway", "production", 3, 5, intPtr(85))
 	body := groupedListResponse(s1, 75, true)
 
-	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(body))
 	})
@@ -149,7 +114,7 @@ func TestServicesGroupedNilScore(t *testing.T) {
 	s1 := groupedServiceJSON("api-gateway", "production", 3, 5, nil)
 	body := groupedListResponse(s1, 1, false)
 
-	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(body))
 	})
@@ -163,7 +128,7 @@ func TestServicesGroupedFlags(t *testing.T) {
 	s1 := groupedServiceJSON("api-gateway", "production", 3, 5, intPtr(85))
 	body := groupedListResponse(s1, 1, false)
 
-	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "10", r.URL.Query().Get("limit"))
 		assert.Equal(t, "20", r.URL.Query().Get("offset"))
 		assert.Equal(t, "name-asc", r.URL.Query().Get("sort"))
@@ -179,7 +144,7 @@ func TestServicesGroupedSortFlag(t *testing.T) {
 	s1 := groupedServiceJSON("api-gateway", "production", 3, 5, intPtr(85))
 	body := groupedListResponse(s1, 1, false)
 
-	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "created-desc", r.URL.Query().Get("sort"))
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(body))
@@ -191,7 +156,7 @@ func TestServicesGroupedSortFlag(t *testing.T) {
 
 func TestServicesGroupedServiceIdentityFilters(t *testing.T) {
 	body := groupedListResponse(`{"id":"aaa-111","name":"api-gateway","namespace":"default","environments":["production","staging"],"insights_count":5,"instrumentation_score":{"score":85},"last_seen_at":"2026-09-03T10:00:00Z"}`, 1, false)
-	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
 		assert.Equal(t, "gateway & api", q.Get("q"))
 		assert.Equal(t, "service", q.Get("view"))
@@ -231,7 +196,7 @@ func TestServicesGroupedInvalidIdentityFlagsBeforeRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) { t.Error("no request expected") })
+			setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) { t.Error("no request expected") })
 			args := append([]string{"services", "grouped"}, tt.args...)
 			_, _, err := executeCommand(args...)
 			require.Error(t, err)
@@ -241,7 +206,7 @@ func TestServicesGroupedInvalidIdentityFlagsBeforeRequest(t *testing.T) {
 }
 
 func TestServicesGroupedInvalidLimit(t *testing.T) {
-	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("should not reach server with invalid limit")
 	})
 
@@ -251,7 +216,7 @@ func TestServicesGroupedInvalidLimit(t *testing.T) {
 }
 
 func TestServicesGroupedInvalidOffset(t *testing.T) {
-	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("should not reach server with invalid offset")
 	})
 
@@ -261,7 +226,7 @@ func TestServicesGroupedInvalidOffset(t *testing.T) {
 }
 
 func TestServicesGroupedInvalidSort(t *testing.T) {
-	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("should not reach server with invalid sort")
 	})
 
@@ -272,7 +237,7 @@ func TestServicesGroupedInvalidSort(t *testing.T) {
 
 func TestServicesGrouped401(t *testing.T) {
 	body := `{"error":{"code":"INVALID_API_KEY","message":"Invalid API key"},"meta":{"trace_id":"t1"}}`
-	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		w.Write([]byte(body))
 	})
@@ -287,7 +252,7 @@ func TestServicesGrouped401(t *testing.T) {
 
 func TestServicesGrouped500(t *testing.T) {
 	body := `{"error":{"code":"INTERNAL_ERROR","message":"Internal server error"},"meta":{"trace_id":"t2"}}`
-	setupServicesGroupedServer(t, func(w http.ResponseWriter, r *http.Request) {
+	setupAPIServer(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(body))
 	})
