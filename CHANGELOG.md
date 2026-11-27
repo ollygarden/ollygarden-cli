@@ -14,6 +14,9 @@ file records the curated, human-readable summary.
 - PowerShell installer for checksum-verified Windows setup and user `Path` configuration.
 - `update` command for checksum-verified self-updates from stable GitHub releases on macOS, Linux, and Windows, plus a passive interactive update notice.
 
+### Changed
+- `webhooks test` shows why a test delivery got no response (`Error: blocked_destination`, `timeout`, `tls_error`, or `connection_failed`) with a one-line hint, and no longer prints the `Response Body` row the API stopped returning.
+
 ## [0.1.0] - 2026-04-21
 
 Initial public release.

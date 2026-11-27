@@ -11,9 +11,16 @@ import (
 )
 
 type webhookTestResponse struct {
-	Success      bool   `json:"success"`
-	StatusCode   int    `json:"status_code"`
-	ResponseBody string `json:"response_body"`
+	Success    bool   `json:"success"`
+	StatusCode int    `json:"status_code"`
+	Error      string `json:"error,omitempty"`
+}
+
+var webhookTestErrorHints = map[string]string{
+	"blocked_destination": "The URL must resolve to a public address and must not point at OllyGarden hosts.",
+	"timeout":             "The endpoint did not respond in time. Check that it is reachable.",
+	"tls_error":           "The TLS handshake failed. Check the endpoint's certificate.",
+	"connection_failed":   "Could not connect. Check the endpoint's host and port.",
 }
 
 var webhooksTestCmd = &cobra.Command{
@@ -65,15 +72,15 @@ func runWebhooksTest(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("parsing test response: %w", err)
 	}
 
-	responseBody := tr.ResponseBody
-	if responseBody == "" {
-		responseBody = "(empty)"
-	}
-
 	pairs := []output.KVPair{
 		{Key: "Success", Value: strconv.FormatBool(tr.Success)},
 		{Key: "Status Code", Value: strconv.Itoa(tr.StatusCode)},
-		{Key: "Response Body", Value: responseBody},
+	}
+	if tr.Error != "" {
+		pairs = append(pairs, output.KVPair{Key: "Error", Value: tr.Error})
+		if hint, ok := webhookTestErrorHints[tr.Error]; ok {
+			pairs = append(pairs, output.KVPair{Key: "Hint", Value: hint})
+		}
 	}
 
 	f.PrintKeyValue(pairs)
